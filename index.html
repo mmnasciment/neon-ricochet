@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Neon Ricochet 1v1 - Online v2</title>
+  <title>Neon Ricochet 1v1 - Online v3</title>
   <script src="https://cdn.jsdelivr.net/npm/mqtt@4.3.7/dist/mqtt.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
@@ -15,7 +15,42 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
+      padding: 12px;
     }
+    #hud {
+      width: 860px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      font-size: 15px;
+      font-weight: bold;
+    }
+    .p1-txt { color: #00dcff; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .p2-txt { color: #ff4664; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .center-hud {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #151a2e;
+      border: 1px solid #364670;
+      padding: 6px 14px;
+      border-radius: 99px;
+    }
+    #scoreBoard { font-size: 15px; color: #ffffff; letter-spacing: 0.5px; }
+    .divider { color: #4a5a85; }
+    #pingBadge {
+      font-size: 13px;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: #1f2742;
+      color: #8fa4d4;
+    }
+    .ping-good { color: #50fa7b !important; }
+    .ping-mid  { color: #ffd73c !important; }
+    .ping-bad  { color: #ff6b6b !important; }
+
     #wrapper { position: relative; width: 860px; height: 540px; }
     canvas {
       background: #121624;
@@ -26,7 +61,7 @@
     #overlay {
       position: absolute;
       inset: 0;
-      background: rgba(12, 14, 24, 0.93);
+      background: rgba(12, 14, 24, 0.94);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -37,8 +72,8 @@
       border-radius: 8px;
     }
     h1 { font-size: 28px; letter-spacing: 1px; color: #00dcff; }
-    p { font-size: 14px; color: #b8c4e0; max-width: 600px; line-height: 1.5; }
-    .status { color: #ffd73c; font-weight: bold; font-size: 16px; max-width: 660px; }
+    p { font-size: 13px; color: #b8c4e0; max-width: 600px; line-height: 1.5; }
+    .status { color: #ffd73c; font-weight: bold; font-size: 15px; max-width: 650px; min-height: 22px; }
     .route-badge {
       font-size: 12px;
       color: #8fa4d4;
@@ -47,12 +82,34 @@
       border-radius: 99px;
       border: 1px solid #364670;
     }
-    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      max-width: 340px;
+      margin: 4px 0;
+    }
+    .input-group label { font-size: 13px; color: #9fb0d9; text-align: left; }
+    input[type="text"] {
+      user-select: text;
+      background: #171d33;
+      border: 2px solid #45598a;
+      color: #ffffff;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: bold;
+      outline: none;
+    }
+    input[type="text"]:focus { border-color: #00dcff; }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
     button {
       background: #00dcff;
       color: #0c0e18;
       border: none;
-      padding: 12px 18px;
+      padding: 11px 18px;
       font-family: inherit;
       font-size: 14px;
       font-weight: bold;
@@ -60,45 +117,54 @@
       cursor: pointer;
       transition: transform 0.1s, opacity 0.2s;
     }
-    button:hover { opacity: 0.9; transform: translateY(-1px); }
-    button:disabled { background: #3a4562; color: #8892b0; cursor: not-allowed; }
+    button:hover { opacity: 0.92; transform: translateY(-1px); }
+    button:disabled { background: #3a4562; color: #8892b0; cursor: not-allowed; transform: none; }
     button.secondary { background: #2d3755; color: #f0f5ff; border: 1px solid #5a73aa; }
-    #hud {
-      width: 860px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-      font-size: 15px;
-      font-weight: bold;
-    }
-    .p1-txt { color: #00dcff; }
-    .p2-txt { color: #ff4664; }
   </style>
 </head>
 <body>
 
   <div id="hud">
-    <span class="p1-txt" id="hudP1">JOGADOR 1 (Você): 5 HP</span>
-    <span id="hudCenter">NEON RICOCHET 1v1 (v2)</span>
-    <span class="p2-txt" id="hudP2">JOGADOR 2 (Amigo): 5 HP</span>
+    <span class="p1-txt" id="hudP1">JOGADOR 1: 5 HP</span>
+    <div class="center-hud">
+      <span id="scoreBoard">JOGADOR 1 0 &times; 0 JOGADOR 2</span>
+      <span class="divider">|</span>
+      <span id="pingBadge">Ping: -- ms</span>
+    </div>
+    <span class="p2-txt" id="hudP2">JOGADOR 2: 5 HP</span>
   </div>
 
   <div id="wrapper">
     <canvas id="game" width="860" height="540"></canvas>
 
     <div id="overlay">
-      <h1>NEON RICOCHET 1v1 <span style="font-size:16px;color:#60ff9c;">v2</span></h1>
-      <div class="route-badge" id="routeTxt">Inicializando rota WebSocket...</div>
-      <div class="status" id="statusTxt">Conectando ao servidor de salas...</div>
-      <p>
-        Controles Online: Mova no <b>WASD</b> ou <b>Setas</b> &bull; Atire com <b>F</b>, <b>Numpad 1</b> ou <b>Shift Direito</b>.
-      </p>
-      <div class="btn-row" id="hostActions">
-        <button id="copyBtn" disabled>Gerando link...</button>
-        <button id="switchRouteBtn" class="secondary">Trocar Rota de Rede</button>
-        <button id="localBtn" class="secondary">Testar no Mesmo PC</button>
+      <h1>NEON RICOCHET 1v1 <span style="font-size:16px;color:#50fa7b;">v3</span></h1>
+      <div class="route-badge" id="routeTxt">Inicializando rede...</div>
+      <div class="status" id="statusTxt">Conectando...</div>
+
+      <div class="input-group">
+        <label id="nameLabel" for="nameInput">Seu Nome:</label>
+        <input type="text" id="nameInput" maxlength="14" placeholder="Digite seu nome..." autocomplete="off" />
       </div>
+
+      <div class="input-group" id="localP2Group" style="display:none;">
+        <label for="nameInputP2">Nome do Jogador 2 (Setas):</label>
+        <input type="text" id="nameInputP2" maxlength="14" placeholder="Nome do Jogador 2..." autocomplete="off" />
+      </div>
+
+      <div class="btn-row" id="hostActions">
+        <button id="copyBtn" disabled>Conectando...</button>
+        <button id="switchRouteBtn" class="secondary">Trocar Rota</button>
+        <button id="localBtn" class="secondary">Mesmo PC</button>
+      </div>
+
+      <div class="btn-row" id="guestActions" style="display:none;">
+        <button id="joinBtn" disabled>Conectando à sala...</button>
+      </div>
+
+      <p>
+        Controles Online: <b>WASD</b> ou <b>Setas</b> para mover &bull; <b>F</b>, <b>Numpad 1</b> ou <b>Shift Direito</b> para atirar.
+      </p>
     </div>
   </div>
 
@@ -108,15 +174,26 @@
     const overlay = document.getElementById('overlay');
     const statusTxt = document.getElementById('statusTxt');
     const routeTxt = document.getElementById('routeTxt');
+    const nameInput = document.getElementById('nameInput');
+    const nameLabel = document.getElementById('nameLabel');
+    const localP2Group = document.getElementById('localP2Group');
+    const nameInputP2 = document.getElementById('nameInputP2');
     const copyBtn = document.getElementById('copyBtn');
     const switchRouteBtn = document.getElementById('switchRouteBtn');
     const localBtn = document.getElementById('localBtn');
     const hostActions = document.getElementById('hostActions');
+    const guestActions = document.getElementById('guestActions');
+    const joinBtn = document.getElementById('joinBtn');
     const hudP1 = document.getElementById('hudP1');
     const hudP2 = document.getElementById('hudP2');
+    const scoreBoard = document.getElementById('scoreBoard');
+    const pingBadge = document.getElementById('pingBadge');
 
     const W = canvas.width;
     const H = canvas.height;
+    const SPEED = 265;
+    const BULLET_SPEED = 520;
+
     const OBSTACLES = [
       { x: 190, y: 110, w: 44, h: 105 },
       { x: 190, y: 325, w: 44, h: 105 },
@@ -125,58 +202,179 @@
       { x: 408, y: 215, w: 44, h: 110 }
     ];
 
-    // Três servidores públicos WSS (o primeiro usa porta 443 padrão HTTPS)
     const BROKERS = [
-      { name: 'Rota 1 - Porta 443 (Anti-CGNAT/Firewall)', url: 'wss://mqtt.eclipseprojects.io:443/mqtt' },
-      { name: 'Rota 2 - EMQX Global', url: 'wss://broker.emqx.io:8084/mqtt' },
-      { name: 'Rota 3 - HiveMQ Public', url: 'wss://broker.hivemq.com:8884/mqtt' }
+      { name: 'Rota 1 - Porta 443', url: 'wss://mqtt.eclipseprojects.io:443/mqtt' },
+      { name: 'Rota 2 - EMQX', url: 'wss://broker.emqx.io:8084/mqtt' },
+      { name: 'Rota 3 - HiveMQ', url: 'wss://broker.hivemq.com:8884/mqtt' }
     ];
+
+    const ICE_CONFIG = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]
+    };
+
+    function safeGet(store, k, def = '') {
+      try { return store.getItem(k) || def; } catch (_) { return def; }
+    }
+    function safeSet(store, k, v) {
+      try { store.setItem(k, v); } catch (_) {}
+    }
 
     const params = new URLSearchParams(window.location.search);
     const guestRoomParam = params.get('sala');
-    const isGuestUrl = Boolean(guestRoomParam);
+    const isGuest = Boolean(guestRoomParam);
+    const myId = isGuest ? 2 : 1;
     let brokerIdx = Math.min(BROKERS.length - 1, Math.max(0, parseInt(params.get('b') || '0', 10) || 0));
 
-    // Código da sala persistente na aba do Host (não perde o link se apertar F5)
-    let roomId = guestRoomParam || sessionStorage.getItem('nr_host_room');
+    let roomId = guestRoomParam || safeGet(sessionStorage, 'nr_room_v3');
     if (!roomId) {
       roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-      sessionStorage.setItem('nr_host_room', roomId);
+      safeSet(sessionStorage, 'nr_room_v3', roomId);
     }
 
-    const topicC2H = `neonricochet_br_v2/${roomId}/c2h`;
-    const topicH2C = `neonricochet_br_v2/${roomId}/h2c`;
+    const topicC2H = `neonricochet_v3/${roomId}/c2h`;
+    const topicH2C = `neonricochet_v3/${roomId}/h2c`;
+    const mySessionSid = Math.random().toString(36).substring(2, 9);
+    let activeGuestSid = '';
 
-    let mode = 'MENU'; // MENU, HOST, GUEST, LOCAL
-    let client = null;
-    let fallbackTimer = null;
+    // Preenche nome salvo se existir
+    nameInput.value = safeGet(localStorage, isGuest ? 'nr_name_p2' : 'nr_name_p1', '');
+    nameInputP2.value = safeGet(localStorage, 'nr_name_local_p2', '');
+
+    let mode = 'MENU'; // MENU, ONLINE, LOCAL
+    let wssConnected = false;
+    let guestWantsJoin = false;
+    let localSetupOpen = false;
     let inviteUrl = '';
-    let lastPeerSeen = 0;
 
-    let p1, p2, bullets = [], winner = 0;
-    let remoteMove = { dx: 0, dy: 0 };
+    // Estado de rede
+    let mqttClient = null;
+    let fallbackTimer = null;
+    let pc = null;
+    let fastDC = null;
+    let relDC = null;
+    let pendingIce = [];
+    let p2pReady = false;
+    let lastFastRecv = 0;
+    let pingMs = null;
 
-    function makePlayer(id, x, y, aimX, color) {
+    // Estado da partida
+    let roundId = 1;
+    let moveSeq = 0;
+    let bulletSeq = 0;
+    let wins = { p1: 0, p2: 0 };
+    let winner = 0;
+    let p1, p2, bullets = [], sparks = [];
+
+    function cleanName(raw, fallback) {
+      const trimmed = (raw || '').trim().slice(0, 14);
+      return trimmed || fallback;
+    }
+
+    function makePlayer(id, x, y, aimX, color, name) {
       return {
-        id, x, y, tx: x, ty: y, r: 16, aimX, aimY: 0, color,
+        id, name, x, y, netX: x, netY: y, vx: 0, vy: 0,
+        r: 16, aimX, aimY: 0, color,
         hp: 5, ammo: 3, maxAmmo: 3, reloadTimer: 0,
-        fireCd: 0, invuln: 0
+        fireCd: 0, invuln: 0,
+        lastSeq: 0, lastPktTime: performance.now()
       };
     }
 
-    function resetMatch() {
-      p1 = makePlayer(1, 90, H / 2, 1, '#00dcff');
-      p2 = makePlayer(2, W - 90, H / 2, -1, '#ff4664');
+    function initPlayers() {
+      const n1 = p1 ? p1.name : cleanName(nameInput.value, 'Jogador 1');
+      const n2 = p2 ? p2.name : 'Jogador 2';
+      p1 = makePlayer(1, 90, H / 2, 1, '#00dcff', n1);
+      p2 = makePlayer(2, W - 90, H / 2, -1, '#ff4664', n2);
       bullets = [];
+      sparks = [];
       winner = 0;
+      moveSeq = 0;
+      updateHud();
     }
-    resetMatch();
+    initPlayers();
 
-    // Teclado
+    function spawnSparks(x, y, color, count = 10) {
+      for (let i = 0; i < count; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 60 + Math.random() * 170;
+        sparks.push({
+          x, y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          color,
+          life: 0.28,
+          maxLife: 0.28
+        });
+      }
+    }
+
+    function updateHud() {
+      hudP1.textContent = `${p1.name}: ${p1.hp} HP`;
+      hudP2.textContent = `${p2.name}: ${p2.hp} HP`;
+      scoreBoard.textContent = `${p1.name} ${wins.p1} × ${wins.p2} ${p2.name}`;
+
+      pingBadge.classList.remove('ping-good', 'ping-mid', 'ping-bad');
+      if (mode === 'LOCAL') {
+        pingBadge.textContent = 'Local (0 ms)';
+        pingBadge.classList.add('ping-good');
+      } else if (pingMs === null) {
+        pingBadge.textContent = 'Ping: -- ms';
+      } else {
+        const tag = p2pReady ? '⚡ P2P' : '🌐 WSS';
+        pingBadge.textContent = `${tag}: ${pingMs} ms`;
+        if (pingMs < 50) pingBadge.classList.add('ping-good');
+        else if (pingMs <= 120) pingBadge.classList.add('ping-mid');
+        else pingBadge.classList.add('ping-bad');
+      }
+    }
+
+    // Controle de Teclado (ignora quando estiver digitando nos inputs de nome)
     const keys = {};
-    let lastSentMove = { dx: 0, dy: 0 };
+    window.addEventListener('keydown', (e) => {
+      if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+        if (e.code === 'Enter') {
+          if (isGuest && !joinBtn.disabled) joinBtn.click();
+          else if (!isGuest && localSetupOpen) localBtn.click();
+          else if (!isGuest && !copyBtn.disabled) copyBtn.click();
+        }
+        return;
+      }
 
-    function getCombinedMove() {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+        e.preventDefault();
+      }
+      keys[e.code] = true;
+      if (e.repeat) return;
+
+      const isP1Act = e.code === 'KeyF';
+      const isP2Act = e.code === 'Numpad1' || e.code === 'ShiftRight';
+      const isAnyAct = isP1Act || isP2Act;
+
+      if (mode === 'LOCAL') {
+        if (isP1Act && !winner) shootBullet(p1, false);
+        if (isP2Act && !winner) shootBullet(p2, false);
+        if (e.code === 'KeyR' && winner) {
+          roundId++;
+          initPlayers();
+        }
+      } else if (mode === 'ONLINE') {
+        const me = myId === 1 ? p1 : p2;
+        if (isAnyAct && !winner) shootBullet(me, true);
+        if (e.code === 'KeyR' && winner) {
+          if (myId === 1) startNextOnlineRound();
+          else sendReliable({ t: 'req_round' });
+        }
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.code] = false;
+    });
+
+    function getCombinedInput() {
       let dx = 0, dy = 0;
       if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
       if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
@@ -185,331 +383,632 @@
       return { dx, dy };
     }
 
-    function publishJson(topic, obj) {
-      if (client && client.connected) {
-        client.publish(topic, JSON.stringify(obj), { qos: 0 });
+    // Transporte Híbrido: MQTT WSS + Upgrade Automático para WebRTC P2P UDP
+    function sendMqtt(obj) {
+      if (mqttClient && mqttClient.connected) {
+        const outTopic = isGuest ? topicC2H : topicH2C;
+        mqttClient.publish(outTopic, JSON.stringify(obj), { qos: 0 });
       }
     }
 
-    function sendGuestMove(force = false) {
-      if (mode !== 'GUEST') return;
-      const m = getCombinedMove();
-      if (force || m.dx !== lastSentMove.dx || m.dy !== lastSentMove.dy) {
-        lastSentMove = m;
-        publishJson(topicC2H, { t: 'm', dx: m.dx, dy: m.dy });
+    function sendFast(obj) {
+      if (p2pReady && fastDC && fastDC.readyState === 'open') {
+        try { fastDC.send(JSON.stringify(obj)); return; } catch (_) {}
+      }
+      sendMqtt(obj);
+    }
+
+    function sendReliable(obj) {
+      if (p2pReady && relDC && relDC.readyState === 'open') {
+        try { relDC.send(JSON.stringify(obj)); return; } catch (_) {}
+      }
+      sendMqtt(obj);
+    }
+
+    function closeWebRTC() {
+      p2pReady = false;
+      pendingIce = [];
+      if (fastDC) { try { fastDC.close(); } catch (_) {} fastDC = null; }
+      if (relDC) { try { relDC.close(); } catch (_) {} relDC = null; }
+      if (pc) { try { pc.close(); } catch (_) {} pc = null; }
+    }
+
+    function bindFastChannel(ch) {
+      fastDC = ch;
+      ch.onmessage = (ev) => {
+        lastFastRecv = performance.now();
+        let data;
+        try { data = JSON.parse(ev.data); } catch (_) { return; }
+        if (data.t === 'p2p_probe') {
+          p2pReady = true;
+          try { ch.send(JSON.stringify({ t: 'p2p_ack', ts: data.ts })); } catch (_) {}
+          return;
+        }
+        if (data.t === 'p2p_ack') {
+          p2pReady = true;
+          pingMs = Math.max(1, Math.round(performance.now() - data.ts));
+          updateHud();
+          return;
+        }
+        handleGamePacket(data);
+      };
+      ch.onclose = () => { p2pReady = false; updateHud(); };
+    }
+
+    function bindRelChannel(ch) {
+      relDC = ch;
+      ch.onmessage = (ev) => {
+        try { handleGamePacket(JSON.parse(ev.data)); } catch (_) {}
+      };
+    }
+
+    function setupPeerConnection() {
+      closeWebRTC();
+      try {
+        pc = new RTCPeerConnection(ICE_CONFIG);
+      } catch (_) {
+        return null;
+      }
+
+      pc.onicecandidate = (ev) => {
+        if (ev.candidate) {
+          sendMqtt({ t: 'rtc_ice', sid: isGuest ? mySessionSid : activeGuestSid, cand: ev.candidate });
+        }
+      };
+
+      if (!isGuest) {
+        bindFastChannel(pc.createDataChannel('fast', { ordered: false, maxRetransmits: 0 }));
+        bindRelChannel(pc.createDataChannel('rel', { ordered: true }));
+        pc.createOffer()
+          .then((offer) => pc.setLocalDescription(offer))
+          .then(() => {
+            sendMqtt({ t: 'rtc_offer', sid: activeGuestSid, sdp: pc.localDescription });
+          })
+          .catch(() => {});
+      } else {
+        pc.ondatachannel = (ev) => {
+          if (ev.channel.label === 'fast') bindFastChannel(ev.channel);
+          if (ev.channel.label === 'rel') bindRelChannel(ev.channel);
+        };
+      }
+      return pc;
+    }
+
+    function flushIceQueue() {
+      if (!pc || !pc.remoteDescription) return;
+      while (pendingIce.length > 0) {
+        const c = pendingIce.shift();
+        pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {});
       }
     }
 
-    window.addEventListener('keydown', (e) => {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
-        e.preventDefault();
+    // Tratamento de pacotes de jogo e sinalização
+    function handleSignalingAndLobby(data) {
+      if (!isGuest) {
+        if (data.t === 'join') {
+          const isNewSession = data.sid !== activeGuestSid;
+          activeGuestSid = data.sid;
+          p1.name = cleanName(nameInput.value, 'Jogador 1');
+          p2.name = cleanName(data.name, 'Jogador 2');
+
+          if (mode !== 'ONLINE' || isNewSession) {
+            mode = 'ONLINE';
+            nameInput.blur();
+            overlay.style.display = 'none';
+            document.title = `🟢 ${p1.name} vs ${p2.name}`;
+            roundId++;
+            initPlayers();
+            setupPeerConnection();
+          }
+
+          sendMqtt({
+            t: 'welcome',
+            sid: activeGuestSid,
+            hostName: p1.name,
+            guestName: p2.name,
+            wins,
+            rId: roundId
+          });
+          return true;
+        }
+        if (data.t === 'rtc_ans' && data.sid === activeGuestSid && pc) {
+          pc.setRemoteDescription(new RTCSessionDescription(data.sdp))
+            .then(flushIceQueue)
+            .catch(() => {});
+          return true;
+        }
+        if (data.t === 'rtc_ice' && data.sid === activeGuestSid && pc) {
+          if (pc.remoteDescription) pc.addIceCandidate(new RTCIceCandidate(data.cand)).catch(() => {});
+          else pendingIce.push(data.cand);
+          return true;
+        }
+      } else {
+        if (data.t === 'welcome' && data.sid === mySessionSid) {
+          p1.name = cleanName(data.hostName, 'Jogador 1');
+          p2.name = cleanName(data.guestName, cleanName(nameInput.value, 'Jogador 2'));
+          wins = data.wins || wins;
+          if (mode !== 'ONLINE' || roundId !== data.rId) {
+            roundId = data.rId;
+            mode = 'ONLINE';
+            guestWantsJoin = false;
+            nameInput.blur();
+            overlay.style.display = 'none';
+            document.title = `🟢 ${p1.name} vs ${p2.name}`;
+            initPlayers();
+          }
+          updateHud();
+          return true;
+        }
+        if (data.t === 'rtc_offer' && data.sid === mySessionSid) {
+          const peerConn = setupPeerConnection();
+          if (peerConn) {
+            peerConn.setRemoteDescription(new RTCSessionDescription(data.sdp))
+              .then(() => {
+                flushIceQueue();
+                return peerConn.createAnswer();
+              })
+              .then((ans) => peerConn.setLocalDescription(ans))
+              .then(() => {
+                sendMqtt({ t: 'rtc_ans', sid: mySessionSid, sdp: peerConn.localDescription });
+              })
+              .catch(() => {});
+          }
+          return true;
+        }
+        if (data.t === 'rtc_ice' && data.sid === mySessionSid && pc) {
+          if (pc.remoteDescription) pc.addIceCandidate(new RTCIceCandidate(data.cand)).catch(() => {});
+          else pendingIce.push(data.cand);
+          return true;
+        }
       }
-      keys[e.code] = true;
-      sendGuestMove(false);
-      if (e.repeat) return;
-
-      const isP1Action = e.code === 'KeyF';
-      const isP2Action = e.code === 'Numpad1' || e.code === 'ShiftRight';
-      const isAnyAction = isP1Action || isP2Action;
-
-      if (mode === 'LOCAL') {
-        if (isP1Action && !winner) tryShoot(p1);
-        if (isP2Action && !winner) tryShoot(p2);
-        if (e.code === 'KeyR' && winner) resetMatch();
-      } else if (mode === 'HOST') {
-        if (isAnyAction && !winner) tryShoot(p1);
-        if (e.code === 'KeyR' && winner) { resetMatch(); sendHostState(); }
-      } else if (mode === 'GUEST') {
-        if (isAnyAction && !winner) publishJson(topicC2H, { t: 'shoot' });
-        if (e.code === 'KeyR' && winner) publishJson(topicC2H, { t: 'restart' });
-      }
-    });
-
-    window.addEventListener('keyup', (e) => {
-      keys[e.code] = false;
-      sendGuestMove(false);
-    });
-
-    // Empacotamento leve de rede
-    function packPlayer(p) {
-      return [
-        Math.round(p.x * 10) / 10,
-        Math.round(p.y * 10) / 10,
-        Math.round(p.aimX * 100) / 100,
-        Math.round(p.aimY * 100) / 100,
-        p.hp,
-        p.ammo,
-        Math.round(p.invuln * 100) / 100
-      ];
+      return false;
     }
 
-    function unpackPlayer(p, arr) {
-      const [nx, ny, ax, ay, hp, ammo, inv] = arr;
-      if (Math.hypot(nx - p.x, ny - p.y) > 120) {
-        p.x = nx; p.y = ny;
+    function handleGamePacket(data) {
+      if (handleSignalingAndLobby(data)) return;
+
+      if (data.t === 'ping') {
+        sendFast({ t: 'pong', ts: data.ts });
+        return;
       }
-      p.tx = nx; p.ty = ny;
-      p.aimX = ax; p.aimY = ay;
-      p.hp = hp; p.ammo = ammo; p.invuln = inv;
+      if (data.t === 'pong') {
+        pingMs = Math.max(1, Math.round(performance.now() - data.ts));
+        updateHud();
+        return;
+      }
+
+      if (mode !== 'ONLINE') return;
+      const them = myId === 1 ? p2 : p1;
+
+      if (data.t === 'm') {
+        if (data.r !== roundId || data.s <= them.lastSeq) return;
+        them.lastSeq = data.s;
+        them.lastPktTime = performance.now();
+        them.netX = data.x;
+        them.netY = data.y;
+        them.vx = data.vx;
+        them.vy = data.vy;
+        them.aimX = data.ax;
+        them.aimY = data.ay;
+        them.ammo = data.am;
+        them.invuln = data.inv;
+      } else if (data.t === 'fire') {
+        if (data.rId !== roundId || bullets.some((b) => b.id === data.id)) return;
+        const nb = {
+          id: data.id,
+          rId: data.rId,
+          x: data.x,
+          y: data.y,
+          vx: data.vx,
+          vy: data.vy,
+          owner: data.owner,
+          color: data.owner === 1 ? '#00dcff' : '#ff4664',
+          bounces: 1,
+          r: 5
+        };
+        // Avança suavemente metade do ping para compensar o trânsito de rede
+        if (pingMs !== null) {
+          const catchUp = Math.min(0.055, pingMs / 2000);
+          if (catchUp > 0.004) stepSingleBullet(nb, catchUp);
+        }
+        bullets.push(nb);
+      } else if (data.t === 'hit') {
+        if (data.rId !== roundId) return;
+        const idx = bullets.findIndex((b) => b.id === data.bId);
+        if (idx !== -1) bullets.splice(idx, 1);
+        const victim = data.target === 1 ? p1 : p2;
+        victim.hp = data.hp;
+        victim.invuln = 0.45;
+        spawnSparks(victim.x, victim.y, victim.color, 12);
+        updateHud();
+      } else if (data.t === 'ko') {
+        if (data.rId !== roundId || winner !== 0) return;
+        winner = data.winner;
+        wins = data.wins;
+        const loser = winner === 1 ? p2 : p1;
+        loser.hp = 0;
+        spawnSparks(loser.x, loser.y, loser.color, 22);
+        updateHud();
+      } else if (data.t === 'req_round' && myId === 1 && winner !== 0) {
+        startNextOnlineRound();
+      } else if (data.t === 'new_round') {
+        roundId = data.rId;
+        wins = data.wins;
+        initPlayers();
+      }
     }
 
-    function sendHostState() {
-      if (mode !== 'HOST') return;
-      publishJson(topicH2C, {
-        t: 's',
-        p1: packPlayer(p1),
-        p2: packPlayer(p2),
-        b: bullets.map(b => [Math.round(b.x), Math.round(b.y), Math.round(b.vx), Math.round(b.vy), b.owner]),
-        w: winner
-      });
+    function startNextOnlineRound() {
+      roundId++;
+      initPlayers();
+      sendReliable({ t: 'new_round', rId: roundId, wins });
     }
 
-    // Conexão WebSocket MQTT com fallback automático
-    function connectNetwork() {
-      if (client) {
-        try { client.end(true); } catch (_) {}
-        client = null;
+    // Conexão inicial ao Broker WebSocket
+    function connectWss() {
+      if (mqttClient) {
+        try { mqttClient.end(true); } catch (_) {}
+        mqttClient = null;
       }
       clearTimeout(fallbackTimer);
+      wssConnected = false;
 
       const broker = BROKERS[brokerIdx];
       routeTxt.textContent = `${broker.name} | Sala: ${roomId}`;
 
-      if (isGuestUrl) {
+      if (isGuest) {
         hostActions.style.display = 'none';
-        hudP1.textContent = 'JOGADOR 1 (Amigo): 5 HP';
-        hudP2.textContent = 'JOGADOR 2 (Você): 5 HP';
-        statusTxt.textContent = `[1/2] Conectando à ${broker.name}...`;
+        guestActions.style.display = 'flex';
+        nameLabel.textContent = 'Seu Nome (Jogador 2):';
+        joinBtn.disabled = true;
+        joinBtn.textContent = 'Conectando à sala...';
+        statusTxt.textContent = `Conectando à sala ${roomId}...`;
       } else {
+        nameLabel.textContent = 'Seu Nome (Jogador 1):';
         copyBtn.disabled = true;
-        copyBtn.textContent = 'Conectando rota...';
-        statusTxt.textContent = `Preparando sala ${roomId} na ${broker.name}...`;
+        copyBtn.textContent = 'Conectando...';
+        statusTxt.textContent = `Preparando sala ${roomId} em ${broker.name}...`;
       }
 
-      const clientId = 'nr_' + Math.random().toString(36).substring(2, 10);
-      client = mqtt.connect(broker.url, {
-        clientId,
+      const cid = 'nr3_' + Math.random().toString(36).substring(2, 10);
+      mqttClient = mqtt.connect(broker.url, {
+        clientId: cid,
         clean: true,
         connectTimeout: 5500,
         reconnectPeriod: 2000
       });
 
-      // Se a rota atual não responder em 6s antes de conectar, tenta a próxima no Host
       fallbackTimer = setTimeout(() => {
-        if (!client || !client.connected) {
-          if (!isGuestUrl) {
+        if (!mqttClient || !mqttClient.connected) {
+          if (!isGuest) {
             brokerIdx = (brokerIdx + 1) % BROKERS.length;
-            connectNetwork();
+            connectWss();
           } else {
-            statusTxt.textContent = `Sua rede bloqueou a ${broker.name}. Peça para seu amigo clicar em "Trocar Rota de Rede" e enviar o novo link.`;
+            statusTxt.textContent = `Rota bloqueada na sua rede. Peça para seu amigo clicar em "Trocar Rota" e enviar o novo link.`;
           }
         }
       }, 6000);
 
-      client.on('connect', () => {
+      mqttClient.on('connect', () => {
         clearTimeout(fallbackTimer);
-        if (isGuestUrl) {
-          client.subscribe(topicH2C, { qos: 0 });
-          statusTxt.textContent = `[2/2] Rede conectada! Chamando sala ${roomId} (seu amigo precisa estar com a página aberta)...`;
-          publishJson(topicC2H, { t: 'join' });
+        wssConnected = true;
+
+        if (isGuest) {
+          mqttClient.subscribe(topicH2C, { qos: 0 });
+          statusTxt.textContent = 'Sala localizada! Digite seu nome abaixo e clique em Entrar:';
+          joinBtn.disabled = false;
+          joinBtn.textContent = 'Entrar na Partida';
+          if (!nameInput.value.trim()) nameInput.focus();
         } else {
-          client.subscribe(topicC2H, { qos: 0 });
-          inviteUrl = `${window.location.origin}${window.location.pathname}?sala=${roomId}&b=${brokerIdx}&v=2`;
+          mqttClient.subscribe(topicC2H, { qos: 0 });
+          inviteUrl = `${window.location.origin}${window.location.pathname}?sala=${roomId}&b=${brokerIdx}&v=3`;
           if (window.location.protocol === 'file:') {
-            statusTxt.textContent = 'Arquivo aberto localmente no PC. Suba este index.html no GitHub Pages para gerar o link online!';
+            statusTxt.textContent = 'Arquivo aberto localmente. Publique no GitHub Pages para gerar o link online!';
           } else {
-            statusTxt.textContent = 'Sala online pronta! Copie o link abaixo e envie para seu amigo:';
+            statusTxt.textContent = 'Digite seu nome e copie o link da sala para enviar ao seu amigo:';
             copyBtn.disabled = false;
             copyBtn.textContent = 'Copiar Link da Sala';
+            if (!nameInput.value.trim()) nameInput.focus();
           }
         }
       });
 
-      client.on('message', (topic, payload) => {
-        let data;
-        try { data = JSON.parse(payload.toString()); } catch (_) { return; }
-
-        if (!isGuestUrl && topic === topicC2H) {
-          lastPeerSeen = performance.now();
-          if (data.t === 'join') {
-            if (mode !== 'HOST') {
-              mode = 'HOST';
-              resetMatch();
-              overlay.style.display = 'none';
-              document.title = '🟢 AMIGO ENTROU! - Neon Ricochet';
-            }
-            sendHostState();
-          } else if (data.t === 'm') {
-            remoteMove.dx = data.dx || 0;
-            remoteMove.dy = data.dy || 0;
-          } else if (data.t === 'shoot' && mode === 'HOST' && !winner) {
-            tryShoot(p2);
-          } else if (data.t === 'restart' && mode === 'HOST' && winner) {
-            resetMatch();
-            sendHostState();
-          }
-        } else if (isGuestUrl && topic === topicH2C) {
-          if (data.t === 's') {
-            lastPeerSeen = performance.now();
-            if (mode !== 'GUEST') {
-              mode = 'GUEST';
-              overlay.style.display = 'none';
-              document.title = '🟢 Em Partida - Neon Ricochet';
-            }
-            unpackPlayer(p1, data.p1);
-            unpackPlayer(p2, data.p2);
-            bullets = data.b.map(arr => ({
-              x: arr[0], y: arr[1], vx: arr[2], vy: arr[3],
-              owner: arr[4], color: arr[4] === 1 ? '#00dcff' : '#ff4664', r: 5
-            }));
-            winner = data.w;
-          }
-        }
+      mqttClient.on('message', (_, payload) => {
+        try { handleGamePacket(JSON.parse(payload.toString())); } catch (_) {}
       });
     }
 
-    connectNetwork();
+    connectWss();
+
+    // Eventos de interface (Lobby e Nomes)
+    nameInput.addEventListener('input', () => {
+      const val = nameInput.value.trim();
+      safeSet(localStorage, isGuest ? 'nr_name_p2' : 'nr_name_p1', val);
+      if (!isGuest) {
+        p1.name = cleanName(val, 'Jogador 1');
+        updateHud();
+      }
+    });
 
     copyBtn.addEventListener('click', () => {
+      const typed = nameInput.value.trim();
+      if (!typed) {
+        statusTxt.textContent = 'Por favor, digite seu nome no campo acima antes de copiar o link!';
+        nameInput.focus();
+        return;
+      }
+      p1.name = cleanName(typed, 'Jogador 1');
+      safeSet(localStorage, 'nr_name_p1', p1.name);
+      updateHud();
+
       navigator.clipboard.writeText(inviteUrl).then(() => {
-        copyBtn.textContent = 'Link Copiado! Aguardando amigo entrar...';
+        copyBtn.textContent = 'Link Copiado! Aguardando amigo...';
+        statusTxt.textContent = `Olá, ${p1.name}! Assim que seu amigo digitar o nome dele e clicar em Entrar, o duelo começa.`;
       });
+    });
+
+    joinBtn.addEventListener('click', () => {
+      const typed = nameInput.value.trim();
+      if (!typed) {
+        statusTxt.textContent = 'Digite seu nome acima antes de entrar na partida!';
+        nameInput.focus();
+        return;
+      }
+      p2.name = cleanName(typed, 'Jogador 2');
+      safeSet(localStorage, 'nr_name_p2', p2.name);
+      guestWantsJoin = true;
+      joinBtn.disabled = true;
+      joinBtn.textContent = 'Entrando na arena...';
+      statusTxt.textContent = 'Chamando o anfitrião da sala...';
+      sendMqtt({ t: 'join', sid: mySessionSid, name: p2.name });
     });
 
     switchRouteBtn.addEventListener('click', () => {
       mode = 'MENU';
       brokerIdx = (brokerIdx + 1) % BROKERS.length;
-      connectNetwork();
+      connectWss();
     });
 
     localBtn.addEventListener('click', () => {
-      if (client) { try { client.end(true); } catch (_) {} }
+      if (!localSetupOpen) {
+        localSetupOpen = true;
+        localP2Group.style.display = 'flex';
+        nameLabel.textContent = 'Nome do Jogador 1 (WASD + F):';
+        localBtn.textContent = 'Iniciar Duelo Local';
+        localBtn.classList.remove('secondary');
+        copyBtn.style.display = 'none';
+        switchRouteBtn.style.display = 'none';
+        statusTxt.textContent = 'Digite os nomes dos dois jogadores para jogar no mesmo teclado:';
+        if (!nameInput.value.trim()) nameInput.focus();
+        else nameInputP2.focus();
+        return;
+      }
+
+      const n1 = cleanName(nameInput.value, 'Jogador 1');
+      const n2 = cleanName(nameInputP2.value, 'Jogador 2');
+      safeSet(localStorage, 'nr_name_p1', n1);
+      safeSet(localStorage, 'nr_name_local_p2', n2);
+
+      closeWebRTC();
+      if (mqttClient) { try { mqttClient.end(true); } catch (_) {} }
+      p1.name = n1;
+      p2.name = n2;
+      wins = { p1: 0, p2: 0 };
       mode = 'LOCAL';
-      hudP1.textContent = 'P1 [WASD + F]: 5 HP';
-      hudP2.textContent = 'P2 [Setas + Numpad1/ShiftDir]: 5 HP';
-      resetMatch();
+      nameInput.blur();
+      nameInputP2.blur();
       overlay.style.display = 'none';
+      initPlayers();
     });
 
-    // Física e colisões
+    // Física, Extrapolação Suave e Colisões
     function rectCircleCollide(rx, ry, rw, rh, cx, cy, cr) {
       const testX = Math.max(rx, Math.min(cx, rx + rw));
       const testY = Math.max(ry, Math.min(cy, ry + rh));
       return Math.hypot(cx - testX, cy - testY) < cr;
     }
 
-    function updatePlayer(p, dx, dy, dt) {
-      if (dx !== 0 || dy !== 0) {
-        const len = Math.hypot(dx, dy);
-        dx /= len; dy /= len;
-        p.aimX = dx; p.aimY = dy;
-      }
-      const speed = 265;
-
-      p.x = Math.max(p.r, Math.min(W - p.r, p.x + dx * speed * dt));
+    function moveWithObstacles(p, moveX, moveY) {
+      p.x = Math.max(p.r, Math.min(W - p.r, p.x + moveX));
       for (const o of OBSTACLES) {
         if (rectCircleCollide(o.x, o.y, o.w, o.h, p.x, p.y, p.r)) {
-          p.x = dx > 0 ? o.x - p.r : o.x + o.w + p.r;
+          p.x = moveX > 0 ? o.x - p.r : o.x + o.w + p.r;
         }
       }
-
-      p.y = Math.max(p.r, Math.min(H - p.r, p.y + dy * speed * dt));
+      p.y = Math.max(p.r, Math.min(H - p.r, p.y + moveY));
       for (const o of OBSTACLES) {
         if (rectCircleCollide(o.x, o.y, o.w, o.h, p.x, p.y, p.r)) {
-          p.y = dy > 0 ? o.y - p.r : o.y + o.h + p.r;
+          p.y = moveY > 0 ? o.y - p.r : o.y + o.h + p.r;
         }
-      }
-
-      if (p.fireCd > 0) p.fireCd -= dt;
-      if (p.invuln > 0) p.invuln -= dt;
-      if (p.ammo < p.maxAmmo) {
-        p.reloadTimer += dt;
-        if (p.reloadTimer >= 1.0) { p.ammo++; p.reloadTimer = 0; }
       }
     }
 
-    function tryShoot(p) {
+    function updateLocalPlayer(p, dx, dy, dt) {
+      if (dx !== 0 || dy !== 0) {
+        const len = Math.hypot(dx, dy);
+        dx /= len;
+        dy /= len;
+        p.aimX = dx;
+        p.aimY = dy;
+      }
+      p.vx = dx * SPEED;
+      p.vy = dy * SPEED;
+      moveWithObstacles(p, p.vx * dt, p.vy * dt);
+
+      if (p.fireCd > 0) p.fireCd -= dt;
+      if (p.invuln > 0) p.invuln = Math.max(0, p.invuln - dt);
+      if (p.ammo < p.maxAmmo) {
+        p.reloadTimer += dt;
+        if (p.reloadTimer >= 1.0) {
+          p.ammo++;
+          p.reloadTimer = 0;
+        }
+      }
+    }
+
+    // Dead Reckoning + Velocidade de Correção Limitada (elimina travadas e corridas bruscas)
+    function updateRemotePlayer(p, dt) {
+      const age = (performance.now() - p.lastPktTime) / 1000;
+      if (age < 0.22) {
+        const prevX = p.x, prevY = p.y;
+        p.x = p.netX; p.y = p.netY;
+        moveWithObstacles(p, p.vx * dt, p.vy * dt);
+        p.netX = p.x; p.netY = p.y;
+
+        p.x = prevX; p.y = prevY;
+        moveWithObstacles(p, p.vx * dt, p.vy * dt);
+      }
+
+      const ex = p.netX - p.x;
+      const ey = p.netY - p.y;
+      const errDist = Math.hypot(ex, ey);
+
+      if (errDist > 180) {
+        p.x = p.netX;
+        p.y = p.netY;
+      } else if (errDist > 0.5) {
+        const maxDriftSpeed = Math.min(errDist * 10, 155);
+        const step = Math.min(errDist, maxDriftSpeed * dt);
+        moveWithObstacles(p, (ex / errDist) * step, (ey / errDist) * step);
+      }
+
+      if (p.invuln > 0) p.invuln = Math.max(0, p.invuln - dt);
+    }
+
+    function shootBullet(p, syncOnline) {
       if (p.ammo <= 0 || p.fireCd > 0) return;
       p.ammo--;
       p.fireCd = 0.16;
-      const bSpeed = 520;
-      bullets.push({
+
+      const b = {
+        id: `${p.id}_${++bulletSeq}`,
+        rId: roundId,
         x: p.x + p.aimX * (p.r + 8),
         y: p.y + p.aimY * (p.r + 8),
-        vx: p.aimX * bSpeed,
-        vy: p.aimY * bSpeed,
+        vx: p.aimX * BULLET_SPEED,
+        vy: p.aimY * BULLET_SPEED,
         owner: p.id,
         color: p.color,
         bounces: 1,
         r: 5
-      });
+      };
+      bullets.push(b);
+
+      if (syncOnline) {
+        sendReliable({
+          t: 'fire',
+          id: b.id,
+          rId: roundId,
+          x: Math.round(b.x * 10) / 10,
+          y: Math.round(b.y * 10) / 10,
+          vx: Math.round(b.vx * 10) / 10,
+          vy: Math.round(b.vy * 10) / 10,
+          owner: b.owner
+        });
+      }
     }
 
-    function simulateHostOrLocal(dt) {
-      if (winner) return;
+    function stepSingleBullet(b, dt) {
+      for (let s = 0; s < 2; s++) {
+        b.x += b.vx * dt * 0.5;
+        if (b.x - b.r <= 0 || b.x + b.r >= W || OBSTACLES.some((o) => rectCircleCollide(o.x, o.y, o.w, o.h, b.x, b.y, b.r))) {
+          b.x -= b.vx * dt * 0.5;
+          if (b.bounces > 0) { b.vx = -b.vx; b.bounces--; } else return false;
+        }
+        b.y += b.vy * dt * 0.5;
+        if (b.y - b.r <= 0 || b.y + b.r >= H || OBSTACLES.some((o) => rectCircleCollide(o.x, o.y, o.w, o.h, b.x, b.y, b.r))) {
+          b.y -= b.vy * dt * 0.5;
+          if (b.bounces > 0) { b.vy = -b.vy; b.bounces--; } else return false;
+        }
+      }
+      return true;
+    }
+
+    function simulate(dt) {
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        const sp = sparks[i];
+        sp.x += sp.vx * dt;
+        sp.y += sp.vy * dt;
+        sp.life -= dt;
+        if (sp.life <= 0) sparks.splice(i, 1);
+      }
+
+      if (winner || mode === 'MENU') return;
 
       if (mode === 'LOCAL') {
         const p1dx = (keys['KeyD'] ? 1 : 0) - (keys['KeyA'] ? 1 : 0);
         const p1dy = (keys['KeyS'] ? 1 : 0) - (keys['KeyW'] ? 1 : 0);
         const p2dx = (keys['ArrowRight'] ? 1 : 0) - (keys['ArrowLeft'] ? 1 : 0);
         const p2dy = (keys['ArrowDown'] ? 1 : 0) - (keys['ArrowUp'] ? 1 : 0);
-        updatePlayer(p1, p1dx, p1dy, dt);
-        updatePlayer(p2, p2dx, p2dy, dt);
-      } else {
-        const m1 = getCombinedMove();
-        updatePlayer(p1, m1.dx, m1.dy, dt);
-        updatePlayer(p2, remoteMove.dx, remoteMove.dy, dt);
+        updateLocalPlayer(p1, p1dx, p1dy, dt);
+        updateLocalPlayer(p2, p2dx, p2dy, dt);
+
+        const distP = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+        if (distP > 0 && distP < p1.r + p2.r) {
+          const push = (p1.r + p2.r - distP) * 0.5;
+          const nx = (p2.x - p1.x) / distP;
+          const ny = (p2.y - p1.y) / distP;
+          moveWithObstacles(p1, -nx * push, -ny * push);
+          moveWithObstacles(p2, nx * push, ny * push);
+        }
+      } else if (mode === 'ONLINE') {
+        const me = myId === 1 ? p1 : p2;
+        const them = myId === 1 ? p2 : p1;
+        const inp = getCombinedInput();
+        updateLocalPlayer(me, inp.dx, inp.dy, dt);
+        updateRemotePlayer(them, dt);
+
+        const distP = Math.hypot(them.x - me.x, them.y - me.y);
+        if (distP > 0 && distP < me.r + them.r) {
+          const push = me.r + them.r - distP;
+          moveWithObstacles(me, -((them.x - me.x) / distP) * push, -((them.y - me.y) / distP) * push);
+        }
       }
 
-      const distP = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-      if (distP > 0 && distP < p1.r + p2.r) {
-        const push = (p1.r + p2.r - distP) * 0.5;
-        const nx = (p2.x - p1.x) / distP;
-        const ny = (p2.y - p1.y) / distP;
-        p1.x -= nx * push; p1.y -= ny * push;
-        p2.x += nx * push; p2.y += ny * push;
-      }
-
+      // Atualização de projéteis e checagem justa de impacto
       for (let i = bullets.length - 1; i >= 0; i--) {
         const b = bullets[i];
-        let dead = false;
-
-        for (let step = 0; step < 2; step++) {
-          b.x += b.vx * dt * 0.5;
-          if (b.x - b.r <= 0 || b.x + b.r >= W || OBSTACLES.some(o => rectCircleCollide(o.x, o.y, o.w, o.h, b.x, b.y, b.r))) {
-            b.x -= b.vx * dt * 0.5;
-            if (b.bounces > 0) { b.vx = -b.vx; b.bounces--; } else { dead = true; break; }
-          }
-          b.y += b.vy * dt * 0.5;
-          if (b.y - b.r <= 0 || b.y + b.r >= H || OBSTACLES.some(o => rectCircleCollide(o.x, o.y, o.w, o.h, b.x, b.y, b.r))) {
-            b.y -= b.vy * dt * 0.5;
-            if (b.bounces > 0) { b.vy = -b.vy; b.bounces--; } else { dead = true; break; }
-          }
+        if (!stepSingleBullet(b, dt)) {
+          spawnSparks(b.x, b.y, b.color, 5);
+          bullets.splice(i, 1);
+          continue;
         }
-
-        if (dead) { bullets.splice(i, 1); continue; }
 
         const target = b.owner === 1 ? p2 : p1;
-        if (Math.hypot(b.x - target.x, b.y - target.y) < target.r + b.r) {
-          bullets.splice(i, 1);
-          if (target.invuln <= 0) {
-            target.hp--;
-            target.invuln = 0.45;
-            if (target.hp <= 0) winner = b.owner;
+        if (mode === 'LOCAL') {
+          if (Math.hypot(b.x - target.x, b.y - target.y) < target.r + b.r) {
+            bullets.splice(i, 1);
+            if (target.invuln <= 0) {
+              target.hp--;
+              target.invuln = 0.45;
+              spawnSparks(target.x, target.y, target.color, 14);
+              if (target.hp <= 0) {
+                winner = b.owner;
+                if (winner === 1) wins.p1++; else wins.p2++;
+              }
+              updateHud();
+            }
+          }
+        } else if (mode === 'ONLINE') {
+          const me = myId === 1 ? p1 : p2;
+          // Cada jogador valida os tiros que atingem a própria nave na sua tela (100% justo)
+          if (b.owner !== myId && Math.hypot(b.x - me.x, b.y - me.y) < me.r + b.r) {
+            bullets.splice(i, 1);
+            if (me.invuln <= 0 && !winner) {
+              me.hp = Math.max(0, me.hp - 1);
+              me.invuln = 0.45;
+              spawnSparks(me.x, me.y, me.color, 14);
+              sendReliable({ t: 'hit', rId: roundId, bId: b.id, target: myId, hp: me.hp });
+
+              if (me.hp <= 0) {
+                winner = b.owner;
+                if (winner === 1) wins.p1++; else wins.p2++;
+                sendReliable({ t: 'ko', rId: roundId, winner, wins });
+              }
+              updateHud();
+            }
           }
         }
-      }
-    }
-
-    function interpolateGuest(dt) {
-      const k = Math.min(1, dt * 20);
-      p1.x += (p1.tx - p1.x) * k;
-      p1.y += (p1.ty - p1.y) * k;
-      p2.x += (p2.tx - p2.x) * k;
-      p2.y += (p2.ty - p2.y) * k;
-      for (const b of bullets) {
-        b.x = Math.max(b.r, Math.min(W - b.r, b.x + b.vx * dt));
-        b.y = Math.max(b.r, Math.min(H - b.r, b.y + b.vy * dt));
       }
     }
 
@@ -539,6 +1038,11 @@
         ctx.arc(p.x - 9 + i * 9, p.y - p.r - 9, 3, 0, Math.PI * 2);
         ctx.fill();
       }
+
+      ctx.fillStyle = '#cbd5f0';
+      ctx.font = 'bold 12px Consolas, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.name, p.x, p.y + p.r + 16);
     }
 
     function render() {
@@ -571,58 +1075,96 @@
         ctx.fill();
       }
 
-      hudP1.textContent = hudP1.textContent.replace(/:\s*\d+\s*HP/, `: ${p1.hp} HP`);
-      hudP2.textContent = hudP2.textContent.replace(/:\s*\d+\s*HP/, `: ${p2.hp} HP`);
+      for (const sp of sparks) {
+        ctx.globalAlpha = Math.max(0, sp.life / sp.maxLife);
+        ctx.fillStyle = sp.color;
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
 
       if (winner) {
-        ctx.fillStyle = 'rgba(10, 12, 20, 0.8)';
+        const winPlayer = winner === 1 ? p1 : p2;
+        ctx.fillStyle = 'rgba(10, 12, 20, 0.84)';
         ctx.fillRect(0, 0, W, H);
-        ctx.fillStyle = winner === 1 ? '#00dcff' : '#ff4664';
-        ctx.font = 'bold 34px Consolas, monospace';
+
+        ctx.fillStyle = winPlayer.color;
+        ctx.font = 'bold 32px Consolas, monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(`JOGADOR ${winner} VENCEU!`, W / 2, H / 2 - 12);
+        ctx.fillText(`${winPlayer.name.toUpperCase()} VENCEU A RODADA!`, W / 2, H / 2 - 28);
+
+        ctx.fillStyle = '#ffd73c';
+        ctx.font = 'bold 20px Consolas, monospace';
+        ctx.fillText(`Placar Geral: ${p1.name} ${wins.p1} × ${wins.p2} ${p2.name}`, W / 2, H / 2 + 12);
+
         ctx.fillStyle = '#f0f5ff';
-        ctx.font = 'bold 18px Consolas, monospace';
-        ctx.fillText('Pressione [ R ] para jogar novamente', W / 2, H / 2 + 28);
+        ctx.font = 'bold 16px Consolas, monospace';
+        ctx.fillText('Pressione [ R ] para iniciar a próxima rodada', W / 2, H / 2 + 52);
       }
     }
 
+    // Loops de simulação, sincronização adaptativa e medição de Ping
     let lastTick = performance.now();
+    let netSyncAccum = 0;
 
-    function stepSimulation() {
+    function stepFrame() {
       const now = performance.now();
       const dt = Math.min((now - lastTick) / 1000, 0.05);
       if (dt <= 0.001) return;
       lastTick = now;
 
-      if (mode === 'HOST' || mode === 'LOCAL') {
-        simulateHostOrLocal(dt);
-      } else if (mode === 'GUEST') {
-        interpolateGuest(dt);
+      simulate(dt);
+
+      if (mode === 'ONLINE') {
+        netSyncAccum += dt;
+        // 30 pacotes/s no modo direto P2P UDP | ~14 pacotes/s leves no modo WSS (evita fila TCP)
+        const interval = p2pReady ? 0.033 : 0.070;
+        if (netSyncAccum >= interval) {
+          netSyncAccum = 0;
+          const me = myId === 1 ? p1 : p2;
+          sendFast({
+            t: 'm',
+            s: ++moveSeq,
+            r: roundId,
+            x: Math.round(me.x * 10) / 10,
+            y: Math.round(me.y * 10) / 10,
+            vx: Math.round(me.vx),
+            vy: Math.round(me.vy),
+            ax: Math.round(me.aimX * 100) / 100,
+            ay: Math.round(me.aimY * 100) / 100,
+            am: me.ammo,
+            inv: Math.round(me.invuln * 100) / 100
+          });
+        }
       }
     }
 
-    // Loop de rede independente da aba estar visível (45ms = ~22 pacotes/s)
+    // Mantém a física rodando mesmo se alguém clicar fora da aba
     setInterval(() => {
-      if (document.hidden) stepSimulation();
-      if (mode === 'HOST') {
-        sendHostState();
-      }
-    }, 45);
+      if (document.hidden) stepFrame();
+    }, 40);
 
-    // Rechamada automática do convidado até o Host responder e heartbeat contínuo
+    // Medidor de Ping em tempo real + Sonda de upgrade P2P + Rechamada de entrada
     setInterval(() => {
-      if (isGuestUrl && client && client.connected) {
-        if (mode !== 'GUEST' || performance.now() - lastPeerSeen > 2500) {
-          publishJson(topicC2H, { t: 'join' });
-        } else {
-          sendGuestMove(true);
-        }
+      if (isGuest && guestWantsJoin && mode !== 'ONLINE' && wssConnected) {
+        sendMqtt({ t: 'join', sid: mySessionSid, name: p2.name });
       }
-    }, 900);
+
+      if (mode === 'ONLINE') {
+        if (!p2pReady && fastDC && fastDC.readyState === 'open' && relDC && relDC.readyState === 'open') {
+          try { fastDC.send(JSON.stringify({ t: 'p2p_probe', ts: performance.now() })); } catch (_) {}
+        }
+        if (p2pReady && performance.now() - lastFastRecv > 2600) {
+          p2pReady = false;
+          updateHud();
+        }
+        sendFast({ t: 'ping', ts: performance.now() });
+      }
+    }, 800);
 
     function loop() {
-      stepSimulation();
+      stepFrame();
       render();
       requestAnimationFrame(loop);
     }
