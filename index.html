@@ -2,8 +2,8 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Neon Ricochet 1v1 - Online</title>
-  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
+  <title>Neon Ricochet 1v1 - Online v2</title>
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@4.3.7/dist/mqtt.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body {
@@ -26,27 +26,35 @@
     #overlay {
       position: absolute;
       inset: 0;
-      background: rgba(12, 14, 24, 0.92);
+      background: rgba(12, 14, 24, 0.93);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 16px;
+      gap: 14px;
       padding: 24px;
       text-align: center;
       border-radius: 8px;
     }
     h1 { font-size: 28px; letter-spacing: 1px; color: #00dcff; }
-    p { font-size: 15px; color: #b8c4e0; max-width: 580px; line-height: 1.5; }
-    .status { color: #ffd73c; font-weight: bold; font-size: 16px; }
-    .btn-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    p { font-size: 14px; color: #b8c4e0; max-width: 600px; line-height: 1.5; }
+    .status { color: #ffd73c; font-weight: bold; font-size: 16px; max-width: 660px; }
+    .route-badge {
+      font-size: 12px;
+      color: #8fa4d4;
+      background: #1a2138;
+      padding: 5px 12px;
+      border-radius: 99px;
+      border: 1px solid #364670;
+    }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
     button {
       background: #00dcff;
       color: #0c0e18;
       border: none;
-      padding: 12px 20px;
+      padding: 12px 18px;
       font-family: inherit;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: bold;
       border-radius: 6px;
       cursor: pointer;
@@ -72,7 +80,7 @@
 
   <div id="hud">
     <span class="p1-txt" id="hudP1">JOGADOR 1 (Você): 5 HP</span>
-    <span id="hudCenter">NEON RICOCHET 1v1</span>
+    <span id="hudCenter">NEON RICOCHET 1v1 (v2)</span>
     <span class="p2-txt" id="hudP2">JOGADOR 2 (Amigo): 5 HP</span>
   </div>
 
@@ -80,13 +88,15 @@
     <canvas id="game" width="860" height="540"></canvas>
 
     <div id="overlay">
-      <h1>NEON RICOCHET 1v1</h1>
-      <div class="status" id="statusTxt">Iniciando conexão ponto a ponto...</div>
-      <p id="helpTxt">
-        Controles Online: Mova no <b>WASD</b> ou <b>Setas</b> | Atire com <b>F</b>, <b>Numpad 1</b> ou <b>Shift Direito</b>.
+      <h1>NEON RICOCHET 1v1 <span style="font-size:16px;color:#60ff9c;">v2</span></h1>
+      <div class="route-badge" id="routeTxt">Inicializando rota WebSocket...</div>
+      <div class="status" id="statusTxt">Conectando ao servidor de salas...</div>
+      <p>
+        Controles Online: Mova no <b>WASD</b> ou <b>Setas</b> &bull; Atire com <b>F</b>, <b>Numpad 1</b> ou <b>Shift Direito</b>.
       </p>
       <div class="btn-row" id="hostActions">
         <button id="copyBtn" disabled>Gerando link...</button>
+        <button id="switchRouteBtn" class="secondary">Trocar Rota de Rede</button>
         <button id="localBtn" class="secondary">Testar no Mesmo PC</button>
       </div>
     </div>
@@ -97,8 +107,9 @@
     const ctx = canvas.getContext('2d');
     const overlay = document.getElementById('overlay');
     const statusTxt = document.getElementById('statusTxt');
-    const helpTxt = document.getElementById('helpTxt');
+    const routeTxt = document.getElementById('routeTxt');
     const copyBtn = document.getElementById('copyBtn');
+    const switchRouteBtn = document.getElementById('switchRouteBtn');
     const localBtn = document.getElementById('localBtn');
     const hostActions = document.getElementById('hostActions');
     const hudP1 = document.getElementById('hudP1');
@@ -114,18 +125,40 @@
       { x: 408, y: 215, w: 44, h: 110 }
     ];
 
-    let mode = 'MENU'; // MENU, HOST, GUEST, LOCAL
-    let peer = null;
-    let conn = null;
-    let inviteUrl = '';
+    // Três servidores públicos WSS (o primeiro usa porta 443 padrão HTTPS)
+    const BROKERS = [
+      { name: 'Rota 1 - Porta 443 (Anti-CGNAT/Firewall)', url: 'wss://mqtt.eclipseprojects.io:443/mqtt' },
+      { name: 'Rota 2 - EMQX Global', url: 'wss://broker.emqx.io:8084/mqtt' },
+      { name: 'Rota 3 - HiveMQ Public', url: 'wss://broker.hivemq.com:8884/mqtt' }
+    ];
 
-    // Estado do jogo (controlado pelo Host ou modo Local)
+    const params = new URLSearchParams(window.location.search);
+    const guestRoomParam = params.get('sala');
+    const isGuestUrl = Boolean(guestRoomParam);
+    let brokerIdx = Math.min(BROKERS.length - 1, Math.max(0, parseInt(params.get('b') || '0', 10) || 0));
+
+    // Código da sala persistente na aba do Host (não perde o link se apertar F5)
+    let roomId = guestRoomParam || sessionStorage.getItem('nr_host_room');
+    if (!roomId) {
+      roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+      sessionStorage.setItem('nr_host_room', roomId);
+    }
+
+    const topicC2H = `neonricochet_br_v2/${roomId}/c2h`;
+    const topicH2C = `neonricochet_br_v2/${roomId}/h2c`;
+
+    let mode = 'MENU'; // MENU, HOST, GUEST, LOCAL
+    let client = null;
+    let fallbackTimer = null;
+    let inviteUrl = '';
+    let lastPeerSeen = 0;
+
     let p1, p2, bullets = [], winner = 0;
     let remoteMove = { dx: 0, dy: 0 };
 
     function makePlayer(id, x, y, aimX, color) {
       return {
-        id, x, y, r: 16, aimX, aimY: 0, color,
+        id, x, y, tx: x, ty: y, r: 16, aimX, aimY: 0, color,
         hp: 5, ammo: 3, maxAmmo: 3, reloadTimer: 0,
         fireCd: 0, invuln: 0
       };
@@ -139,13 +172,40 @@
     }
     resetMatch();
 
-    // Captura de teclado
+    // Teclado
     const keys = {};
+    let lastSentMove = { dx: 0, dy: 0 };
+
+    function getCombinedMove() {
+      let dx = 0, dy = 0;
+      if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
+      if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
+      if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
+      if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
+      return { dx, dy };
+    }
+
+    function publishJson(topic, obj) {
+      if (client && client.connected) {
+        client.publish(topic, JSON.stringify(obj), { qos: 0 });
+      }
+    }
+
+    function sendGuestMove(force = false) {
+      if (mode !== 'GUEST') return;
+      const m = getCombinedMove();
+      if (force || m.dx !== lastSentMove.dx || m.dy !== lastSentMove.dy) {
+        lastSentMove = m;
+        publishJson(topicC2H, { t: 'm', dx: m.dx, dy: m.dy });
+      }
+    }
+
     window.addEventListener('keydown', (e) => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
         e.preventDefault();
       }
       keys[e.code] = true;
+      sendGuestMove(false);
       if (e.repeat) return;
 
       const isP1Action = e.code === 'KeyF';
@@ -158,107 +218,157 @@
         if (e.code === 'KeyR' && winner) resetMatch();
       } else if (mode === 'HOST') {
         if (isAnyAction && !winner) tryShoot(p1);
-        if (e.code === 'KeyR' && winner) resetMatch();
-      } else if (mode === 'GUEST' && conn && conn.open) {
-        if (isAnyAction && !winner) conn.send({ type: 'shoot' });
-        if (e.code === 'KeyR' && winner) conn.send({ type: 'restart' });
+        if (e.code === 'KeyR' && winner) { resetMatch(); sendHostState(); }
+      } else if (mode === 'GUEST') {
+        if (isAnyAction && !winner) publishJson(topicC2H, { t: 'shoot' });
+        if (e.code === 'KeyR' && winner) publishJson(topicC2H, { t: 'restart' });
       }
     });
 
-    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+    window.addEventListener('keyup', (e) => {
+      keys[e.code] = false;
+      sendGuestMove(false);
+    });
 
-    function getCombinedMove() {
-      let dx = 0, dy = 0;
-      if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
-      if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
-      if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
-      if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
-      return { dx, dy };
+    // Empacotamento leve de rede
+    function packPlayer(p) {
+      return [
+        Math.round(p.x * 10) / 10,
+        Math.round(p.y * 10) / 10,
+        Math.round(p.aimX * 100) / 100,
+        Math.round(p.aimY * 100) / 100,
+        p.hp,
+        p.ammo,
+        Math.round(p.invuln * 100) / 100
+      ];
     }
 
-    // Configuração de rede (PeerJS / WebRTC)
-    const params = new URLSearchParams(window.location.search);
-    const roomParam = params.get('sala');
-
-    const peerOptions = {
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
+    function unpackPlayer(p, arr) {
+      const [nx, ny, ax, ay, hp, ammo, inv] = arr;
+      if (Math.hypot(nx - p.x, ny - p.y) > 120) {
+        p.x = nx; p.y = ny;
       }
-    };
+      p.tx = nx; p.ty = ny;
+      p.aimX = ax; p.aimY = ay;
+      p.hp = hp; p.ammo = ammo; p.invuln = inv;
+    }
 
-    if (roomParam) {
-      // Modo Convidado (Amigo abriu o link)
-      hostActions.style.display = 'none';
-      statusTxt.textContent = 'Conectando à sala do seu amigo...';
-      hudP1.textContent = 'JOGADOR 1 (Amigo): 5 HP';
-      hudP2.textContent = 'JOGADOR 2 (Você): 5 HP';
+    function sendHostState() {
+      if (mode !== 'HOST') return;
+      publishJson(topicH2C, {
+        t: 's',
+        p1: packPlayer(p1),
+        p2: packPlayer(p2),
+        b: bullets.map(b => [Math.round(b.x), Math.round(b.y), Math.round(b.vx), Math.round(b.vy), b.owner]),
+        w: winner
+      });
+    }
 
-      peer = new Peer(peerOptions);
-      peer.on('open', () => {
-        conn = peer.connect(roomParam, { serialization: 'json' });
-        conn.on('open', () => {
-          mode = 'GUEST';
-          overlay.style.display = 'none';
-        });
-        conn.on('data', (data) => {
-          if (data.type === 'state') {
-            p1 = data.p1;
-            p2 = data.p2;
-            bullets = data.bullets;
-            winner = data.winner;
+    // Conexão WebSocket MQTT com fallback automático
+    function connectNetwork() {
+      if (client) {
+        try { client.end(true); } catch (_) {}
+        client = null;
+      }
+      clearTimeout(fallbackTimer);
+
+      const broker = BROKERS[brokerIdx];
+      routeTxt.textContent = `${broker.name} | Sala: ${roomId}`;
+
+      if (isGuestUrl) {
+        hostActions.style.display = 'none';
+        hudP1.textContent = 'JOGADOR 1 (Amigo): 5 HP';
+        hudP2.textContent = 'JOGADOR 2 (Você): 5 HP';
+        statusTxt.textContent = `[1/2] Conectando à ${broker.name}...`;
+      } else {
+        copyBtn.disabled = true;
+        copyBtn.textContent = 'Conectando rota...';
+        statusTxt.textContent = `Preparando sala ${roomId} na ${broker.name}...`;
+      }
+
+      const clientId = 'nr_' + Math.random().toString(36).substring(2, 10);
+      client = mqtt.connect(broker.url, {
+        clientId,
+        clean: true,
+        connectTimeout: 5500,
+        reconnectPeriod: 2000
+      });
+
+      // Se a rota atual não responder em 6s antes de conectar, tenta a próxima no Host
+      fallbackTimer = setTimeout(() => {
+        if (!client || !client.connected) {
+          if (!isGuestUrl) {
+            brokerIdx = (brokerIdx + 1) % BROKERS.length;
+            connectNetwork();
+          } else {
+            statusTxt.textContent = `Sua rede bloqueou a ${broker.name}. Peça para seu amigo clicar em "Trocar Rota de Rede" e enviar o novo link.`;
           }
-        });
-        conn.on('close', () => {
-          mode = 'MENU';
-          overlay.style.display = 'flex';
-          statusTxt.textContent = 'Conexão encerrada pelo outro jogador.';
-        });
-      });
-      peer.on('error', () => {
-        statusTxt.textContent = 'Não foi possível conectar. Peça um novo link ao seu amigo.';
-      });
-    } else {
-      // Modo Host (Você abriu o site primeiro)
-      peer = new Peer(peerOptions);
-      peer.on('open', (id) => {
-        inviteUrl = window.location.origin + window.location.pathname + '?sala=' + id;
-        if (window.location.protocol === 'file:') {
-          statusTxt.textContent = 'Arquivo aberto localmente. Suba no Netlify Drop para gerar o link online!';
+        }
+      }, 6000);
+
+      client.on('connect', () => {
+        clearTimeout(fallbackTimer);
+        if (isGuestUrl) {
+          client.subscribe(topicH2C, { qos: 0 });
+          statusTxt.textContent = `[2/2] Rede conectada! Chamando sala ${roomId} (seu amigo precisa estar com a página aberta)...`;
+          publishJson(topicC2H, { t: 'join' });
         } else {
-          statusTxt.textContent = 'Sala pronta! Copie o link abaixo e envie para seu amigo:';
-          copyBtn.disabled = false;
-          copyBtn.textContent = 'Copiar Link da Sala';
+          client.subscribe(topicC2H, { qos: 0 });
+          inviteUrl = `${window.location.origin}${window.location.pathname}?sala=${roomId}&b=${brokerIdx}&v=2`;
+          if (window.location.protocol === 'file:') {
+            statusTxt.textContent = 'Arquivo aberto localmente no PC. Suba este index.html no GitHub Pages para gerar o link online!';
+          } else {
+            statusTxt.textContent = 'Sala online pronta! Copie o link abaixo e envie para seu amigo:';
+            copyBtn.disabled = false;
+            copyBtn.textContent = 'Copiar Link da Sala';
+          }
         }
       });
 
-      peer.on('connection', (incoming) => {
-        if (conn && conn.open) { incoming.close(); return; }
-        conn = incoming;
-        conn.on('open', () => {
-          mode = 'HOST';
-          resetMatch();
-          overlay.style.display = 'none';
-        });
-        conn.on('data', (data) => {
-          if (data.type === 'move') {
-            remoteMove.dx = data.dx;
-            remoteMove.dy = data.dy;
-          } else if (data.type === 'shoot' && !winner) {
+      client.on('message', (topic, payload) => {
+        let data;
+        try { data = JSON.parse(payload.toString()); } catch (_) { return; }
+
+        if (!isGuestUrl && topic === topicC2H) {
+          lastPeerSeen = performance.now();
+          if (data.t === 'join') {
+            if (mode !== 'HOST') {
+              mode = 'HOST';
+              resetMatch();
+              overlay.style.display = 'none';
+              document.title = '🟢 AMIGO ENTROU! - Neon Ricochet';
+            }
+            sendHostState();
+          } else if (data.t === 'm') {
+            remoteMove.dx = data.dx || 0;
+            remoteMove.dy = data.dy || 0;
+          } else if (data.t === 'shoot' && mode === 'HOST' && !winner) {
             tryShoot(p2);
-          } else if (data.type === 'restart' && winner) {
+          } else if (data.t === 'restart' && mode === 'HOST' && winner) {
             resetMatch();
+            sendHostState();
           }
-        });
-        conn.on('close', () => {
-          mode = 'MENU';
-          overlay.style.display = 'flex';
-          statusTxt.textContent = 'Seu amigo saiu. Envie o link novamente para reconectar.';
-        });
+        } else if (isGuestUrl && topic === topicH2C) {
+          if (data.t === 's') {
+            lastPeerSeen = performance.now();
+            if (mode !== 'GUEST') {
+              mode = 'GUEST';
+              overlay.style.display = 'none';
+              document.title = '🟢 Em Partida - Neon Ricochet';
+            }
+            unpackPlayer(p1, data.p1);
+            unpackPlayer(p2, data.p2);
+            bullets = data.b.map(arr => ({
+              x: arr[0], y: arr[1], vx: arr[2], vy: arr[3],
+              owner: arr[4], color: arr[4] === 1 ? '#00dcff' : '#ff4664', r: 5
+            }));
+            winner = data.w;
+          }
+        }
       });
     }
+
+    connectNetwork();
 
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(inviteUrl).then(() => {
@@ -266,7 +376,14 @@
       });
     });
 
+    switchRouteBtn.addEventListener('click', () => {
+      mode = 'MENU';
+      brokerIdx = (brokerIdx + 1) % BROKERS.length;
+      connectNetwork();
+    });
+
     localBtn.addEventListener('click', () => {
+      if (client) { try { client.end(true); } catch (_) {} }
       mode = 'LOCAL';
       hudP1.textContent = 'P1 [WASD + F]: 5 HP';
       hudP2.textContent = 'P2 [Setas + Numpad1/ShiftDir]: 5 HP';
@@ -274,7 +391,7 @@
       overlay.style.display = 'none';
     });
 
-    // Física e regras da partida
+    // Física e colisões
     function rectCircleCollide(rx, ry, rw, rh, cx, cy, cr) {
       const testX = Math.max(rx, Math.min(cx, rx + rw));
       const testY = Math.max(ry, Math.min(cy, ry + rh));
@@ -344,7 +461,6 @@
         updatePlayer(p2, remoteMove.dx, remoteMove.dy, dt);
       }
 
-      // Evita sobreposição entre os dois jogadores
       const distP = Math.hypot(p2.x - p1.x, p2.y - p1.y);
       if (distP > 0 && distP < p1.r + p2.r) {
         const push = (p1.r + p2.r - distP) * 0.5;
@@ -354,7 +470,6 @@
         p2.x += nx * push; p2.y += ny * push;
       }
 
-      // Projéteis com 1 ricochete
       for (let i = bullets.length - 1; i >= 0; i--) {
         const b = bullets[i];
         let dead = false;
@@ -383,6 +498,18 @@
             if (target.hp <= 0) winner = b.owner;
           }
         }
+      }
+    }
+
+    function interpolateGuest(dt) {
+      const k = Math.min(1, dt * 20);
+      p1.x += (p1.tx - p1.x) * k;
+      p1.y += (p1.ty - p1.y) * k;
+      p2.x += (p2.tx - p2.x) * k;
+      p2.y += (p2.ty - p2.y) * k;
+      for (const b of bullets) {
+        b.x = Math.max(b.r, Math.min(W - b.r, b.x + b.vx * dt));
+        b.y = Math.max(b.r, Math.min(H - b.r, b.y + b.vy * dt));
       }
     }
 
@@ -417,13 +544,11 @@
     function render() {
       ctx.clearRect(0, 0, W, H);
 
-      // Grade de fundo
       ctx.strokeStyle = '#1a2034';
       ctx.lineWidth = 1;
       for (let x = 40; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
       for (let y = 40; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
 
-      // Obstáculos
       for (const o of OBSTACLES) {
         ctx.fillStyle = '#2d3755';
         ctx.strokeStyle = '#5a73aa';
@@ -446,7 +571,6 @@
         ctx.fill();
       }
 
-      // Atualiza placar de vida no topo
       hudP1.textContent = hudP1.textContent.replace(/:\s*\d+\s*HP/, `: ${p1.hp} HP`);
       hudP2.textContent = hudP2.textContent.replace(/:\s*\d+\s*HP/, `: ${p2.hp} HP`);
 
@@ -463,28 +587,42 @@
       }
     }
 
-    let lastTime = performance.now();
-    let netAccum = 0;
+    let lastTick = performance.now();
 
-    function loop(now) {
-      const dt = Math.min((now - lastTime) / 1000, 0.05);
-      lastTime = now;
+    function stepSimulation() {
+      const now = performance.now();
+      const dt = Math.min((now - lastTick) / 1000, 0.05);
+      if (dt <= 0.001) return;
+      lastTick = now;
 
       if (mode === 'HOST' || mode === 'LOCAL') {
         simulateHostOrLocal(dt);
+      } else if (mode === 'GUEST') {
+        interpolateGuest(dt);
       }
+    }
 
-      netAccum += dt;
-      if (netAccum >= 1 / 60) {
-        netAccum = 0;
-        if (mode === 'HOST' && conn && conn.open) {
-          conn.send({ type: 'state', p1, p2, bullets, winner });
-        } else if (mode === 'GUEST' && conn && conn.open) {
-          const m = getCombinedMove();
-          conn.send({ type: 'move', dx: m.dx, dy: m.dy });
+    // Loop de rede independente da aba estar visível (45ms = ~22 pacotes/s)
+    setInterval(() => {
+      if (document.hidden) stepSimulation();
+      if (mode === 'HOST') {
+        sendHostState();
+      }
+    }, 45);
+
+    // Rechamada automática do convidado até o Host responder e heartbeat contínuo
+    setInterval(() => {
+      if (isGuestUrl && client && client.connected) {
+        if (mode !== 'GUEST' || performance.now() - lastPeerSeen > 2500) {
+          publishJson(topicC2H, { t: 'join' });
+        } else {
+          sendGuestMove(true);
         }
       }
+    }, 900);
 
+    function loop() {
+      stepSimulation();
       render();
       requestAnimationFrame(loop);
     }
