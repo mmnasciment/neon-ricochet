@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Neon Ricochet 1v1 - Online v4</title>
+  <title>Neon Ricochet 1v1 - P2P v5</title>
   <script src="https://cdn.jsdelivr.net/npm/mqtt@4.3.7/dist/mqtt.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
@@ -15,16 +15,16 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      padding: 12px;
+      padding: 10px;
     }
     #hud {
-      width: 860px;
+      width: 900px;
       display: grid;
       grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 10px;
-      font-size: 15px;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 14px;
       font-weight: bold;
     }
     .p1-txt { color: #00dcff; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -32,16 +32,18 @@
     .center-hud {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 9px;
       background: #151a2e;
       border: 1px solid #364670;
-      padding: 6px 14px;
+      padding: 5px 13px;
       border-radius: 99px;
-    }
-    #scoreBoard { font-size: 15px; color: #ffffff; letter-spacing: 0.5px; }
-    .divider { color: #4a5a85; }
-    #pingBadge {
       font-size: 13px;
+    }
+    #scoreBoard { color: #ffffff; }
+    .divider { color: #4a5a85; }
+    #roundPowerHud { color: #ffd73c; }
+    #pingBadge {
+      font-size: 12px;
       padding: 2px 8px;
       border-radius: 99px;
       background: #1f2742;
@@ -51,65 +53,110 @@
     .ping-mid  { color: #ffd73c !important; }
     .ping-bad  { color: #ff6b6b !important; }
 
-    #wrapper { position: relative; width: 860px; height: 540px; }
+    #wrapper { position: relative; width: 900px; height: 560px; }
     canvas {
       background: #121624;
       border: 3px solid #5a73aa;
       border-radius: 8px;
       display: block;
     }
-    #overlay {
+
+    #overlay, #errorModal {
       position: absolute;
       inset: 0;
-      background: rgba(12, 14, 24, 0.94);
+      background: rgba(11, 13, 23, 0.96);
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 14px;
-      padding: 24px;
+      justify-content: space-between;
+      padding: 18px 22px;
       text-align: center;
       border-radius: 8px;
+      overflow-y: auto;
     }
-    h1 { font-size: 28px; letter-spacing: 1px; color: #00dcff; }
-    p { font-size: 13px; color: #b8c4e0; max-width: 610px; line-height: 1.5; }
-    .status { color: #ffd73c; font-weight: bold; font-size: 15px; max-width: 650px; min-height: 22px; }
-    .route-badge {
-      font-size: 12px;
-      color: #8fa4d4;
-      background: #1a2138;
-      padding: 5px 12px;
-      border-radius: 99px;
-      border: 1px solid #364670;
+    #errorModal {
+      background: rgba(14, 10, 18, 0.97);
+      justify-content: center;
+      gap: 14px;
+      z-index: 20;
+    }
+
+    .top-bar { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
+    h1 { font-size: 24px; letter-spacing: 1px; color: #00dcff; }
+    .status { color: #ffd73c; font-weight: bold; font-size: 13.5px; max-width: 760px; min-height: 18px; }
+
+    .setup-row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-end;
+      justify-content: center;
+      width: 100%;
+      flex-wrap: wrap;
     }
     .input-group {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      width: 100%;
-      max-width: 340px;
-      margin: 4px 0;
+      gap: 4px;
+      width: 240px;
     }
-    .input-group label { font-size: 13px; color: #9fb0d9; text-align: left; }
-    input[type="text"] {
+    .input-group label { font-size: 12px; color: #9fb0d9; text-align: left; }
+    input[type="text"], select {
       user-select: text;
       background: #171d33;
       border: 2px solid #45598a;
       color: #ffffff;
-      padding: 10px 12px;
+      padding: 8px 10px;
       border-radius: 6px;
       font-family: inherit;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: bold;
       outline: none;
     }
-    input[type="text"]:focus { border-color: #00dcff; }
-    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+    input[type="text"]:focus, select:focus { border-color: #00dcff; }
+
+    .section-lbl { font-size: 12px; color: #8fa4d4; text-transform: uppercase; letter-spacing: 1px; }
+    .char-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      width: 100%;
+    }
+    .char-card {
+      background: #161c30;
+      border: 2px solid #334268;
+      border-radius: 8px;
+      padding: 11px 12px;
+      text-align: left;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.1s, background 0.15s;
+    }
+    .char-card:hover { border-color: #6684c4; transform: translateY(-2px); }
+    .char-card.selected {
+      background: #1b2542;
+      border-color: #00dcff;
+      box-shadow: 0 0 14px rgba(0, 220, 255, 0.22);
+    }
+    .char-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 15px;
+      font-weight: bold;
+      color: #00dcff;
+      margin-bottom: 2px;
+    }
+    .char-role { font-size: 11px; color: #98a8cf; margin-bottom: 8px; }
+    .stat-list { list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+    .stat-list li { display: flex; justify-content: space-between; border-bottom: 1px solid #222b46; padding-bottom: 2px; }
+    .stat-k { color: #9fb0d9; }
+    .stat-v { color: #f0f5ff; font-weight: bold; }
+
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
     button {
       background: #00dcff;
       color: #0c0e18;
       border: none;
-      padding: 11px 18px;
+      padding: 10px 18px;
       font-family: inherit;
       font-size: 14px;
       font-weight: bold;
@@ -120,6 +167,28 @@
     button:hover { opacity: 0.92; transform: translateY(-1px); }
     button:disabled { background: #3a4562; color: #8892b0; cursor: not-allowed; transform: none; }
     button.secondary { background: #2d3755; color: #f0f5ff; border: 1px solid #5a73aa; }
+    button.danger { background: #ff4664; color: #ffffff; }
+
+    .footer-note { font-size: 12px; color: #b8c4e0; line-height: 1.4; }
+
+    .err-box {
+      background: #1a1423;
+      border: 2px solid #ff4664;
+      border-radius: 8px;
+      padding: 18px 22px;
+      max-width: 720px;
+      text-align: left;
+    }
+    .err-title { color: #ff4664; font-size: 20px; font-weight: bold; margin-bottom: 6px; text-align: center; }
+    .err-reason { color: #ffd73c; font-size: 13.5px; margin-bottom: 12px; text-align: center; }
+    .err-steps { font-size: 13px; color: #dce4f7; line-height: 1.55; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+    .err-steps code {
+      user-select: text;
+      background: #282038;
+      color: #50fa7b;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
@@ -129,42 +198,77 @@
     <div class="center-hud">
       <span id="scoreBoard">JOGADOR 1 0 &times; 0 JOGADOR 2</span>
       <span class="divider">|</span>
-      <span id="pingBadge">Ping: -- ms</span>
+      <span id="roundPowerHud">Poder: --</span>
+      <span class="divider">|</span>
+      <span id="pingBadge">⚡ P2P: -- ms</span>
     </div>
     <span class="p2-txt" id="hudP2">JOGADOR 2: 5 HP</span>
   </div>
 
   <div id="wrapper">
-    <canvas id="game" width="860" height="540"></canvas>
+    <canvas id="game" width="900" height="560"></canvas>
 
     <div id="overlay">
-      <h1>NEON RICOCHET 1v1 <span style="font-size:16px;color:#50fa7b;">v4</span></h1>
-      <div class="route-badge" id="routeTxt">Testando rotas para menor latência...</div>
-      <div class="status" id="statusTxt">Buscando o servidor mais rápido...</div>
-
-      <div class="input-group">
-        <label id="nameLabel" for="nameInput">Seu Nome:</label>
-        <input type="text" id="nameInput" maxlength="14" placeholder="Digite seu nome..." autocomplete="off" />
+      <div class="top-bar">
+        <h1>NEON RICOCHET 1v1 <span style="font-size:14px;color:#50fa7b;">v5 • P2P EXCLUSIVO</span></h1>
+        <div class="status" id="statusTxt">Preparando sala P2P...</div>
       </div>
 
-      <div class="input-group" id="localP2Group" style="display:none;">
-        <label for="nameInputP2">Nome do Jogador 2 (Setas):</label>
-        <input type="text" id="nameInputP2" maxlength="14" placeholder="Nome do Jogador 2..." autocomplete="off" />
+      <div class="setup-row">
+        <div class="input-group">
+          <label id="nameLabel" for="nameInput">Seu Nome:</label>
+          <input type="text" id="nameInput" maxlength="14" placeholder="Digite seu nome..." autocomplete="off" />
+        </div>
+
+        <div class="input-group" id="localP2NameBox" style="display:none;">
+          <label for="nameInputP2">Nome do Jogador 2 (Setas):</label>
+          <input type="text" id="nameInputP2" maxlength="14" placeholder="Nome do Jogador 2..." autocomplete="off" />
+        </div>
+
+        <div class="input-group" id="localP2CharBox" style="display:none;">
+          <label for="charSelectP2">Nave do Jogador 2:</label>
+          <select id="charSelectP2">
+            <option value="vanguard">1. Vanguarda (Equilibrada)</option>
+            <option value="scatter">2. Dispersor (Leque Curto)</option>
+            <option value="specter">3. Espectro (Alta Cadência)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="width:100%; display:flex; flex-direction:column; gap:6px;">
+        <div class="section-lbl" id="charGridLabel">Escolha sua Nave (Comparativo de Atributos):</div>
+        <div class="char-grid" id="charGrid"></div>
       </div>
 
       <div class="btn-row" id="hostActions">
-        <button id="copyBtn" disabled>Medindo rotas...</button>
-        <button id="switchRouteBtn" class="secondary">Trocar Rota</button>
-        <button id="localBtn" class="secondary">Mesmo PC</button>
+        <button id="copyBtn" disabled>Preparando Link P2P...</button>
+        <button id="localBtn" class="secondary">Jogar no Mesmo PC</button>
       </div>
 
       <div class="btn-row" id="guestActions" style="display:none;">
-        <button id="joinBtn" disabled>Conectando à sala...</button>
+        <button id="joinBtn" disabled>Localizando Sala...</button>
       </div>
 
-      <p>
-        Controles Online: <b>WASD</b> ou <b>Setas</b> para mover &bull; <b>F</b>, <b>Numpad 1</b> ou <b>Shift Direito</b> para atirar.
-      </p>
+      <div class="footer-note">
+        Mover: <b>WASD</b> ou <b>Setas</b> &bull; Atirar: <b>Barra de Espaço</b> (P1/Online), <b>Numpad 1</b> ou <b>Shift Direito</b> (P2/Online)
+      </div>
+    </div>
+
+    <div id="errorModal" style="display:none;">
+      <div class="err-box">
+        <div class="err-title">⚠️ FALHA NA CONEXÃO DIRETA P2P</div>
+        <div class="err-reason" id="errReasonTxt">Não foi possível abrir o túnel UDP direto entre os dois computadores.</div>
+        <ol class="err-steps">
+          <li><b>Brave ou Bloqueadores WebRTC:</b> Se um dos dois estiver usando o navegador <b>Brave</b> ou extensões anti-WebRTC/VPN, desative o escudo (ícone do leão) nesta página e tente novamente.</li>
+          <li><b>Firewall do Windows (Mesma Rede):</b> Certifique-se de que o Wi-Fi/Cabo no Windows está marcado como <b>Rede Privada</b> (e não Rede Pública) e que o navegador tem permissão no <i>Windows Defender Firewall</i>.</li>
+          <li><b>Isolamento mDNS Local (Chrome / Edge):</b> Se estiverem no mesmo roteador e o P2P falhar, abra <code>chrome://flags/#enable-webrtc-hide-local-ips-with-mdns</code> nos dois PCs, mude para <b>Disabled</b> e reinicie o navegador.</li>
+          <li><b>Rede Corporativa ou 4G Simétrico:</b> Redes empresariais, universitárias e algumas operadoras móveis bloqueiam portas UDP ponto a ponto; dê preferência a uma rede residencial.</li>
+        </ol>
+      </div>
+      <div class="btn-row">
+        <button id="retryP2PBtn">Tentar Conexão P2P Novamente</button>
+        <button id="closeErrBtn" class="secondary">Voltar à Seleção de Nave</button>
+      </div>
     </div>
   </div>
 
@@ -172,14 +276,20 @@
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const overlay = document.getElementById('overlay');
+    const errorModal = document.getElementById('errorModal');
+    const errReasonTxt = document.getElementById('errReasonTxt');
+    const retryP2PBtn = document.getElementById('retryP2PBtn');
+    const closeErrBtn = document.getElementById('closeErrBtn');
     const statusTxt = document.getElementById('statusTxt');
-    const routeTxt = document.getElementById('routeTxt');
     const nameInput = document.getElementById('nameInput');
     const nameLabel = document.getElementById('nameLabel');
-    const localP2Group = document.getElementById('localP2Group');
+    const localP2NameBox = document.getElementById('localP2NameBox');
     const nameInputP2 = document.getElementById('nameInputP2');
+    const localP2CharBox = document.getElementById('localP2CharBox');
+    const charSelectP2 = document.getElementById('charSelectP2');
+    const charGridLabel = document.getElementById('charGridLabel');
+    const charGrid = document.getElementById('charGrid');
     const copyBtn = document.getElementById('copyBtn');
-    const switchRouteBtn = document.getElementById('switchRouteBtn');
     const localBtn = document.getElementById('localBtn');
     const hostActions = document.getElementById('hostActions');
     const guestActions = document.getElementById('guestActions');
@@ -187,32 +297,130 @@
     const hudP1 = document.getElementById('hudP1');
     const hudP2 = document.getElementById('hudP2');
     const scoreBoard = document.getElementById('scoreBoard');
+    const roundPowerHud = document.getElementById('roundPowerHud');
     const pingBadge = document.getElementById('pingBadge');
 
     const W = canvas.width;
     const H = canvas.height;
-    const SPEED = 265;
-    const BULLET_SPEED = 520;
+    const BASE_SPEED = 260;
+    const BULLET_SPEED = 515;
 
+    // 3 Personagens equilibrados apenas pelos parâmetros solicitados
+    const CHARS = {
+      vanguard: {
+        id: 'vanguard',
+        num: 1,
+        name: 'Vanguarda',
+        role: 'Equilibrada • Longo Alcance',
+        pattern: 'Único Central',
+        cadence: 'Média (0,28s)',
+        duration: 'Longa (1,60s)',
+        size: 'Médio (5,5 px)',
+        ammoText: '3 cargas',
+        reloadText: '1,05s / carga',
+        fireCd: 0.28,
+        bulletLife: 1.60,
+        bulletRadius: 5.5,
+        maxAmmo: 3,
+        reloadTime: 1.05
+      },
+      scatter: {
+        id: 'scatter',
+        num: 2,
+        name: 'Dispersor',
+        role: 'Curto Alcance • Impacto em Cone',
+        pattern: 'Leque Triplo (±13°)',
+        cadence: 'Lenta (0,58s)',
+        duration: 'Curta (0,48s)',
+        size: 'Grande (6,8 px)',
+        ammoText: '2 cargas',
+        reloadText: '1,35s / carga',
+        fireCd: 0.58,
+        bulletLife: 0.48,
+        bulletRadius: 6.8,
+        maxAmmo: 2,
+        reloadTime: 1.35
+      },
+      specter: {
+        id: 'specter',
+        num: 3,
+        name: 'Espectro',
+        role: 'Alta Cadência • Pressão Contínua',
+        pattern: 'Gêmeos Alternados',
+        cadence: 'Rápida (0,15s)',
+        duration: 'Média (0,95s)',
+        size: 'Pequeno (3,5 px)',
+        ammoText: '5 cargas',
+        reloadText: '0,72s / carga',
+        fireCd: 0.15,
+        bulletLife: 0.95,
+        bulletRadius: 3.5,
+        maxAmmo: 5,
+        reloadTime: 0.72
+      }
+    };
+
+    // Poderes equilibrados (apenas 1 sorteado por rodada)
+    const POWERS = {
+      shield: {
+        id: 'shield',
+        label: 'E',
+        name: 'Escudo de Plasma',
+        color: '#50fa7b',
+        desc: 'Bloqueia 1 disparo inimigo sem perder vida (dura até 8s)'
+      },
+      turbo: {
+        id: 'turbo',
+        label: 'V',
+        name: 'Propulsor Turbo',
+        color: '#bd93f9',
+        desc: '+30% de velocidade de movimento na arena por 5,5s'
+      },
+      reload: {
+        id: 'reload',
+        label: 'M',
+        name: 'Sobrecarga',
+        color: '#ffd73c',
+        desc: 'Enche a munição na hora e dobra a velocidade de recarga por 5s'
+      },
+      ricochet: {
+        id: 'ricochet',
+        label: 'R',
+        name: 'Super Ricochete',
+        color: '#ffb86c',
+        desc: 'Disparos rebatem até 3 vezes nas paredes e duram +25% por 5,5s'
+      }
+    };
+
+    // Obstáculos e pontos de poder 100% simétricos
     const OBSTACLES = [
-      { x: 190, y: 110, w: 44, h: 105 },
-      { x: 190, y: 325, w: 44, h: 105 },
-      { x: 626, y: 110, w: 44, h: 105 },
-      { x: 626, y: 325, w: 44, h: 105 },
-      { x: 408, y: 215, w: 44, h: 110 }
+      { x: 200, y: 110, w: 46, h: 110 },
+      { x: 200, y: 340, w: 46, h: 110 },
+      { x: 654, y: 110, w: 46, h: 110 },
+      { x: 654, y: 340, w: 46, h: 110 },
+      { x: 427, y: 225, w: 46, h: 110 }
     ];
 
-    const BROKERS = [
-      { name: 'EMQX Fast', url: 'wss://broker.emqx.io:8084/mqtt' },
-      { name: 'HiveMQ Cloud', url: 'wss://broker.hivemq.com:8884/mqtt' },
-      { name: 'Eclipse 443 (Anti-Firewall)', url: 'wss://mqtt.eclipseprojects.io:443/mqtt' }
+    const POWER_SPOTS = [
+      { x: 450, y: 82 },
+      { x: 450, y: 168 },
+      { x: 450, y: 392 },
+      { x: 450, y: 478 }
+    ];
+
+    // Servidores usados EXCLUSIVAMENTE no lobby para trocar o convite WebRTC do link
+    const SIGNAL_BROKERS = [
+      'wss://broker.emqx.io:8084/mqtt',
+      'wss://broker.hivemq.com:8884/mqtt',
+      'wss://mqtt.eclipseprojects.io:443/mqtt'
     ];
 
     const ICE_CONFIG = {
       iceServers: [
         { urls: 'stun:stun.cloudflare.com:3478' },
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
       ]
     };
 
@@ -227,136 +435,206 @@
     const guestRoomParam = params.get('sala');
     const isGuest = Boolean(guestRoomParam);
     const myId = isGuest ? 2 : 1;
-    let brokerIdx = Math.min(BROKERS.length - 1, Math.max(0, parseInt(params.get('b') || '0', 10) || 0));
+    let signalIdx = Math.min(SIGNAL_BROKERS.length - 1, Math.max(0, parseInt(params.get('b') || '0', 10) || 0));
 
-    let roomId = guestRoomParam || safeGet(sessionStorage, 'nr_room_v4');
+    let roomId = guestRoomParam || safeGet(sessionStorage, 'nr_room_v5');
     if (!roomId) {
       roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-      safeSet(sessionStorage, 'nr_room_v4', roomId);
+      safeSet(sessionStorage, 'nr_room_v5', roomId);
     }
 
-    const topicC2H = `neonricochet_v4/${roomId}/c2h`;
-    const topicH2C = `neonricochet_v4/${roomId}/h2c`;
+    const topicC2H = `neonricochet_v5/${roomId}/c2h`;
+    const topicH2C = `neonricochet_v5/${roomId}/h2c`;
     const mySessionSid = Math.random().toString(36).substring(2, 9);
     let activeGuestSid = '';
 
+    let selectedChar = safeGet(localStorage, 'nr_char_v5', 'vanguard');
+    if (!CHARS[selectedChar]) selectedChar = 'vanguard';
     nameInput.value = safeGet(localStorage, isGuest ? 'nr_name_p2' : 'nr_name_p1', '');
     nameInputP2.value = safeGet(localStorage, 'nr_name_local_p2', '');
 
+    // Renderiza os cartões de seleção de personagem com todas as diferenças
+    function renderCharCards() {
+      charGrid.innerHTML = '';
+      Object.values(CHARS).forEach((ch) => {
+        const card = document.createElement('div');
+        card.className = 'char-card' + (selectedChar === ch.id ? ' selected' : '');
+        card.innerHTML = `
+          <div class="char-title"><span>${ch.num}. ${ch.name}</span><span>${selectedChar === ch.id ? '✓' : ''}</span></div>
+          <div class="char-role">${ch.role}</div>
+          <ul class="stat-list">
+            <li><span class="stat-k">Padrão:</span><span class="stat-v">${ch.pattern}</span></li>
+            <li><span class="stat-k">Cadência:</span><span class="stat-v">${ch.cadence}</span></li>
+            <li><span class="stat-k">Duração Tiro:</span><span class="stat-v">${ch.duration}</span></li>
+            <li><span class="stat-k">Tamanho Tiro:</span><span class="stat-v">${ch.size}</span></li>
+            <li><span class="stat-k">Munição:</span><span class="stat-v">${ch.ammoText}</span></li>
+            <li><span class="stat-k">Recarga:</span><span class="stat-v">${ch.reloadText}</span></li>
+          </ul>
+        `;
+        card.addEventListener('click', () => {
+          selectedChar = ch.id;
+          safeSet(localStorage, 'nr_char_v5', selectedChar);
+          if (!isGuest) p1.nextChar = selectedChar;
+          else p2.nextChar = selectedChar;
+          renderCharCards();
+        });
+        charGrid.appendChild(card);
+      });
+    }
+
+    // Estado de Rede Estritamente P2P
     let mode = 'MENU'; // MENU, ONLINE, LOCAL
-    let wssConnected = false;
-    let guestWantsJoin = false;
     let localSetupOpen = false;
     let inviteUrl = '';
+    let signalClient = null;
+    let signalReady = false;
+    let signalFallbackTimer = null;
 
-    // Estado de rede e P2P
-    let mqttClient = null;
-    let fallbackTimer = null;
     let pc = null;
     let fastDC = null;
     let relDC = null;
-    let p2pReady = false;
-    let p2pAttempts = 0;
-    let lastP2PAttemptTime = 0;
-    let lastFastRecv = 0;
+    let p2pConnected = false;
+    let p2pAttempt = 0;
+    let currentAttemptId = 0;
+    let p2pWatchdog = null;
+    let guestSignalTimeout = null;
+    let earlyIce = [];
+    let lastP2PRecv = 0;
     let pingMs = null;
 
-    // Deduplicação de eventos críticos
-    let evSeq = 0;
-    const seenEvents = new Set();
-
-    // Estado da partida
+    // Estado da Partida e Poderes
     let roundId = 1;
+    let introTimer = 0;
     let moveSeq = 0;
     let bulletSeq = 0;
+    let puSeq = 0;
     let wins = { p1: 0, p2: 0 };
     let winner = 0;
     let damageFlash = 0;
+
+    let powerDeck = [];
+    let currentRoundPower = 'shield';
+    let activePowerOrb = null;
+    let powerSpawnTimer = 3.8;
+
     let p1, p2, bullets = [], sparks = [], popups = [];
 
-    function cleanName(raw, fallback) {
-      const trimmed = (raw || '').trim().slice(0, 14);
-      return trimmed || fallback;
+    function nextPowerFromDeck() {
+      if (powerDeck.length === 0) {
+        powerDeck = Object.keys(POWERS);
+        for (let i = powerDeck.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [powerDeck[i], powerDeck[j]] = [powerDeck[j], powerDeck[i]];
+        }
+      }
+      return powerDeck.pop();
     }
 
-    function makePlayer(id, x, y, aimX, color, name) {
+    function cleanName(raw, fallback) {
+      const t = (raw || '').trim().slice(0, 14);
+      return t || fallback;
+    }
+
+    function makePlayer(id, x, y, aimX, color, name, charId) {
+      const cfg = CHARS[charId] || CHARS.vanguard;
       return {
-        id, name, x, y, netX: x, netY: y, vx: 0, vy: 0,
+        id, name, charId: cfg.id, nextChar: cfg.id,
+        x, y, netX: x, netY: y, vx: 0, vy: 0,
         r: 16, aimX, aimY: 0, color,
-        hp: 5, ammo: 3, maxAmmo: 3, reloadTimer: 0,
-        fireCd: 0, invuln: 0,
-        lastSeq: 0, lastPktTime: performance.now()
+        hp: 5,
+        ammo: cfg.maxAmmo,
+        maxAmmo: cfg.maxAmmo,
+        reloadTimer: 0,
+        fireCd: 0,
+        invuln: 0,
+        barrelToggle: 1,
+        shieldTime: 0,
+        turboTime: 0,
+        reloadBoostTime: 0,
+        ricochetTime: 0,
+        lastSeq: 0,
+        lastPktTime: performance.now()
       };
     }
 
-    function initPlayers() {
+    function initRoundState(rId, powerKey) {
+      roundId = rId;
+      currentRoundPower = POWERS[powerKey] ? powerKey : 'shield';
+      const c1 = p1 ? p1.nextChar : selectedChar;
+      const c2 = p2 ? p2.nextChar : 'vanguard';
       const n1 = p1 ? p1.name : cleanName(nameInput.value, 'Jogador 1');
       const n2 = p2 ? p2.name : 'Jogador 2';
-      p1 = makePlayer(1, 90, H / 2, 1, '#00dcff', n1);
-      p2 = makePlayer(2, W - 90, H / 2, -1, '#ff4664', n2);
+
+      p1 = makePlayer(1, 95, H / 2, 1, '#00dcff', n1, c1);
+      p2 = makePlayer(2, W - 95, H / 2, -1, '#ff4664', n2, c2);
+
       bullets = [];
       sparks = [];
       popups = [];
+      activePowerOrb = null;
+      powerSpawnTimer = 3.8;
       winner = 0;
       damageFlash = 0;
       moveSeq = 0;
+      introTimer = 2.4;
       updateHud();
     }
-    initPlayers();
+
+    initRoundState(1, 'shield');
+    introTimer = 0;
+    renderCharCards();
 
     function spawnSparks(x, y, color, count = 12) {
       for (let i = 0; i < count; i++) {
         const ang = Math.random() * Math.PI * 2;
         const spd = 70 + Math.random() * 190;
-        sparks.push({
-          x, y,
-          vx: Math.cos(ang) * spd,
-          vy: Math.sin(ang) * spd,
-          color,
-          life: 0.28,
-          maxLife: 0.28
-        });
+        sparks.push({ x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, color, life: 0.28, maxLife: 0.28 });
       }
     }
 
     function spawnPopup(x, y, text, color) {
-      popups.push({ x, y: y - 22, text, color, life: 0.55, maxLife: 0.55 });
+      popups.push({ x, y: y - 22, text, color, life: 0.65, maxLife: 0.65 });
     }
 
-    function recordPing(sample, isDirectP2P) {
-      const val = Math.max(1, Math.round(sample));
-      if (pingMs === null || (isDirectP2P && pingMs > 80)) {
-        pingMs = val;
-      } else {
-        pingMs = Math.round(pingMs * 0.65 + val * 0.35);
-      }
-      updateHud();
+    function activeBuffTag(p) {
+      if (p.shieldTime > 0) return ' [ESCUDO]';
+      if (p.turboTime > 0) return ' [TURBO]';
+      if (p.reloadBoostTime > 0) return ' [SOBRECARGA]';
+      if (p.ricochetTime > 0) return ' [3x RICOCHETE]';
+      return '';
     }
 
     function updateHud() {
-      hudP1.textContent = `${p1.name}: ${p1.hp} HP`;
-      hudP2.textContent = `${p2.name}: ${p2.hp} HP`;
+      const c1Name = CHARS[p1.charId].name;
+      const c2Name = CHARS[p2.charId].name;
+      hudP1.textContent = `${p1.name} (${c1Name}): ${p1.hp} HP${activeBuffTag(p1)}`;
+      hudP2.textContent = `${p2.name} (${c2Name}): ${p2.hp} HP${activeBuffTag(p2)}`;
       scoreBoard.textContent = `${p1.name} ${wins.p1} × ${wins.p2} ${p2.name}`;
+
+      const pw = POWERS[currentRoundPower];
+      roundPowerHud.textContent = `Poder: [${pw.label}] ${pw.name}`;
+      roundPowerHud.style.color = pw.color;
 
       pingBadge.classList.remove('ping-good', 'ping-mid', 'ping-bad');
       if (mode === 'LOCAL') {
         pingBadge.textContent = 'Local (0 ms)';
         pingBadge.classList.add('ping-good');
-      } else if (pingMs === null) {
-        pingBadge.textContent = 'Ping: -- ms';
+      } else if (!p2pConnected || pingMs === null) {
+        pingBadge.textContent = '⚡ P2P: -- ms';
       } else {
-        const tag = p2pReady ? '⚡ P2P' : '🌐 WSS';
-        pingBadge.textContent = `${tag}: ${pingMs} ms`;
-        if (pingMs < 60) pingBadge.classList.add('ping-good');
-        else if (pingMs <= 160) pingBadge.classList.add('ping-mid');
+        pingBadge.textContent = `⚡ P2P: ${pingMs} ms`;
+        if (pingMs < 45) pingBadge.classList.add('ping-good');
+        else if (pingMs <= 110) pingBadge.classList.add('ping-mid');
         else pingBadge.classList.add('ping-bad');
       }
     }
 
-    // Controle de Teclado
+    // =========================================================================
+    // CONTROLES DE TECLADO (Barra de Espaço no lugar do F + Numpad1/ShiftRight)
+    // =========================================================================
     const keys = {};
     window.addEventListener('keydown', (e) => {
-      if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT')) {
         if (e.code === 'Enter') {
           if (isGuest && !joinBtn.disabled) joinBtn.click();
           else if (!isGuest && localSetupOpen) localBtn.click();
@@ -371,24 +649,44 @@
       keys[e.code] = true;
       if (e.repeat) return;
 
-      const isP1Act = e.code === 'KeyF';
-      const isP2Act = e.code === 'Numpad1' || e.code === 'ShiftRight';
-      const isAnyAct = isP1Act || isP2Act;
+      // Troca rápida de personagem na tela de fim de rodada antes de apertar R
+      if (winner && (mode === 'ONLINE' || mode === 'LOCAL')) {
+        const mapKey = { Digit1: 'vanguard', Digit2: 'scatter', Digit3: 'specter' };
+        const mapP2Local = { Numpad7: 'vanguard', Numpad8: 'scatter', Numpad9: 'specter', Digit7: 'vanguard', Digit8: 'scatter', Digit9: 'specter' };
+
+        if (mode === 'ONLINE' && mapKey[e.code]) {
+          const me = myId === 1 ? p1 : p2;
+          me.nextChar = mapKey[e.code];
+          selectedChar = me.nextChar;
+          safeSet(localStorage, 'nr_char_v5', selectedChar);
+          sendP2PReliable({ t: 'next_char', who: myId, charId: me.nextChar });
+        } else if (mode === 'LOCAL') {
+          if (mapKey[e.code]) p1.nextChar = mapKey[e.code];
+          if (mapP2Local[e.code]) p2.nextChar = mapP2Local[e.code];
+        }
+
+        if (e.code === 'KeyR') {
+          if (mode === 'LOCAL') {
+            initRoundState(roundId + 1, nextPowerFromDeck());
+          } else if (mode === 'ONLINE') {
+            if (myId === 1) hostStartNextRound();
+            else sendP2PReliable({ t: 'req_round' });
+          }
+        }
+        return;
+      }
+
+      if (introTimer > 0 || winner) return;
+
+      const isSpace = e.code === 'Space';
+      const isP2Key = e.code === 'Numpad1' || e.code === 'ShiftRight';
 
       if (mode === 'LOCAL') {
-        if (isP1Act && !winner) shootBullet(p1, false);
-        if (isP2Act && !winner) shootBullet(p2, false);
-        if (e.code === 'KeyR' && winner) {
-          roundId++;
-          initPlayers();
-        }
+        if (isSpace) shootBullet(p1, false);
+        if (isP2Key) shootBullet(p2, false);
       } else if (mode === 'ONLINE') {
         const me = myId === 1 ? p1 : p2;
-        if (isAnyAct && !winner) shootBullet(me, true);
-        if (e.code === 'KeyR' && winner) {
-          if (myId === 1) startNextOnlineRound();
-          else sendCritical({ t: 'req_round' });
-        }
+        if (isSpace || isP2Key) shootBullet(me, true);
       }
     });
 
@@ -396,7 +694,7 @@
       keys[e.code] = false;
     });
 
-    function getCombinedInput() {
+    function getCombinedMove() {
       let dx = 0, dy = 0;
       if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
       if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
@@ -405,211 +703,274 @@
       return { dx, dy };
     }
 
-    // Camada de Rede Híbrida (P2P em Pacote Único + WSS Otimizado)
-    function sendMqtt(payload) {
-      if (mqttClient && mqttClient.connected) {
+    function isHoldingFireOnline() {
+      return Boolean(keys['Space'] || keys['Numpad1'] || keys['ShiftRight']);
+    }
+
+    // =========================================================================
+    // REDE EXCLUSIVAMENTE P2P (WebRTC DataChannels sem fallback de jogo em WSS)
+    // =========================================================================
+    function sendSignal(obj) {
+      if (signalClient && signalClient.connected) {
         const outTopic = isGuest ? topicC2H : topicH2C;
-        mqttClient.publish(outTopic, JSON.stringify(payload), { qos: 0 });
+        signalClient.publish(outTopic, JSON.stringify(obj), { qos: 0 });
       }
     }
 
-    function sendFast(payload) {
-      if (p2pReady && fastDC && fastDC.readyState === 'open') {
-        try { fastDC.send(JSON.stringify(payload)); return; } catch (_) {}
+    function sendP2PFast(payload) {
+      if (p2pConnected && fastDC && fastDC.readyState === 'open') {
+        try { fastDC.send(JSON.stringify(payload)); } catch (_) {}
       }
-      sendMqtt(payload);
     }
 
-    // Envia eventos críticos (tiro, dano, fim de round) com deduplicação e zero fila
-    function sendCritical(obj) {
-      obj.eid = `${myId}_${++evSeq}_${roomId}`;
-      const raw = JSON.stringify(obj);
-      if (p2pReady) {
-        let sent = false;
-        if (fastDC && fastDC.readyState === 'open') {
-          try { fastDC.send(raw); sent = true; } catch (_) {}
-        }
-        if (relDC && relDC.readyState === 'open') {
-          try { relDC.send(raw); sent = true; } catch (_) {}
-        }
-        if (sent) return;
+    function sendP2PReliable(payload) {
+      if (p2pConnected && relDC && relDC.readyState === 'open') {
+        try { relDC.send(JSON.stringify(payload)); } catch (_) {}
       }
-      sendMqtt(obj);
     }
 
-    function closeWebRTC() {
-      p2pReady = false;
+    function cleanupWebRTC() {
+      p2pConnected = false;
+      clearTimeout(p2pWatchdog);
+      clearTimeout(guestSignalTimeout);
       if (fastDC) { try { fastDC.close(); } catch (_) {} fastDC = null; }
       if (relDC) { try { relDC.close(); } catch (_) {} relDC = null; }
       if (pc) { try { pc.close(); } catch (_) {} pc = null; }
     }
 
-    function waitIceGathering(peerConn, timeoutMs = 1150) {
-      return new Promise((resolve) => {
-        if (peerConn.iceGatheringState === 'complete') {
-          resolve();
-          return;
-        }
-        let finished = false;
-        const done = () => {
-          if (finished) return;
-          finished = true;
-          clearTimeout(timer);
-          peerConn.removeEventListener('icegatheringstatechange', check);
-          resolve();
-        };
-        const check = () => {
-          if (peerConn.iceGatheringState === 'complete') done();
-        };
-        peerConn.addEventListener('icegatheringstatechange', check);
-        const timer = setTimeout(done, timeoutMs);
-      });
+    function showP2PError(reason) {
+      cleanupWebRTC();
+      mode = 'MENU';
+      overlay.style.display = 'flex';
+      errorModal.style.display = 'flex';
+      errReasonTxt.textContent = reason;
+
+      if (isGuest) {
+        joinBtn.disabled = !signalReady;
+        joinBtn.textContent = 'Conectar via P2P e Jogar';
+      } else {
+        statusTxt.textContent = 'Conexão P2P interrompida. Verifique as instruções e tente novamente.';
+      }
+      updateHud();
+    }
+
+    function tryCompleteP2PHandshake() {
+      if (fastDC && fastDC.readyState === 'open' && relDC && relDC.readyState === 'open') {
+        try { fastDC.send(JSON.stringify({ t: 'p2p_probe', ts: performance.now() })); } catch (_) {}
+      }
     }
 
     function bindFastChannel(ch) {
       fastDC = ch;
-      ch.onopen = () => {
-        try { ch.send(JSON.stringify({ t: 'p2p_probe', ts: performance.now() })); } catch (_) {}
-      };
+      ch.onopen = tryCompleteP2PHandshake;
       ch.onmessage = (ev) => {
-        lastFastRecv = performance.now();
+        lastP2PRecv = performance.now();
         let data;
         try { data = JSON.parse(ev.data); } catch (_) { return; }
+
         if (data && !Array.isArray(data)) {
           if (data.t === 'p2p_probe') {
-            p2pReady = true;
             try { ch.send(JSON.stringify({ t: 'p2p_ack', ts: data.ts })); } catch (_) {}
             return;
           }
           if (data.t === 'p2p_ack') {
-            const wasP2P = p2pReady;
-            p2pReady = true;
-            recordPing(performance.now() - data.ts, !wasP2P);
+            const rtt = Math.max(1, Math.round(performance.now() - data.ts));
+            pingMs = pingMs === null ? rtt : Math.round(pingMs * 0.6 + rtt * 0.4);
+
+            if (!p2pConnected) {
+              p2pConnected = true;
+              clearTimeout(p2pWatchdog);
+              clearTimeout(guestSignalTimeout);
+              errorModal.style.display = 'none';
+
+              if (!isGuest) {
+                p1.name = cleanName(nameInput.value, 'Jogador 1');
+                p1.nextChar = selectedChar;
+                const firstPower = nextPowerFromDeck();
+                mode = 'ONLINE';
+                nameInput.blur();
+                overlay.style.display = 'none';
+                document.title = `⚡ P2P: ${p1.name} vs ${p2.name}`;
+                initRoundState(roundId + 1, firstPower);
+
+                sendP2PReliable({
+                  t: 'match_start',
+                  rId: roundId,
+                  p1Name: p1.name,
+                  p1Char: p1.charId,
+                  p2Name: p2.name,
+                  p2Char: p2.charId,
+                  wins,
+                  power: currentRoundPower
+                });
+              }
+            }
+            updateHud();
             return;
           }
         }
-        handleIncoming(data);
+        handleP2PMessage(data);
       };
-      ch.onclose = () => { p2pReady = false; updateHud(); };
+      ch.onclose = () => {
+        if (mode === 'ONLINE') {
+          showP2PError('O canal direto P2P com o outro jogador foi desconectado.');
+        }
+      };
     }
 
     function bindRelChannel(ch) {
       relDC = ch;
+      ch.onopen = tryCompleteP2PHandshake;
       ch.onmessage = (ev) => {
-        lastFastRecv = performance.now();
-        try { handleIncoming(JSON.parse(ev.data)); } catch (_) {}
+        lastP2PRecv = performance.now();
+        try { handleP2PMessage(JSON.parse(ev.data)); } catch (_) {}
       };
     }
 
-    async function initiateHostP2P() {
+    function flushEarlyIce(aid) {
+      if (!pc || !pc.remoteDescription) return;
+      for (let i = earlyIce.length - 1; i >= 0; i--) {
+        if (earlyIce[i].aid === aid) {
+          const cand = earlyIce[i].c;
+          earlyIce.splice(i, 1);
+          pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+        }
+      }
+    }
+
+    async function startHostP2PAttempt() {
       if (isGuest || !activeGuestSid) return;
-      closeWebRTC();
-      lastP2PAttemptTime = performance.now();
-      p2pAttempts++;
+      cleanupWebRTC();
+
+      p2pAttempt++;
+      currentAttemptId++;
+      const aid = currentAttemptId;
+      statusTxt.textContent = `Estabelecendo conexão direta P2P com ${p2.name} (Tentativa ${p2pAttempt}/2)...`;
 
       try {
         const peerConn = new RTCPeerConnection(ICE_CONFIG);
         pc = peerConn;
+
+        peerConn.onicecandidate = (ev) => {
+          if (ev.candidate && pc === peerConn) {
+            sendSignal({ t: 'ice', sid: activeGuestSid, aid, c: ev.candidate });
+          }
+        };
+
         bindFastChannel(peerConn.createDataChannel('fast', { ordered: false, maxRetransmits: 0 }));
         bindRelChannel(peerConn.createDataChannel('rel', { ordered: true }));
 
         const offer = await peerConn.createOffer();
         await peerConn.setLocalDescription(offer);
-        await waitIceGathering(peerConn, 1150);
+        sendSignal({ t: 'offer', sid: activeGuestSid, aid, sdp: peerConn.localDescription });
 
-        if (pc === peerConn && peerConn.localDescription) {
-          sendMqtt({ t: 'rtc_offer_full', sid: activeGuestSid, sdp: peerConn.localDescription });
-        }
-      } catch (_) {}
+        p2pWatchdog = setTimeout(() => {
+          if (!p2pConnected && pc === peerConn) {
+            if (p2pAttempt < 2) {
+              startHostP2PAttempt();
+            } else {
+              sendSignal({ t: 'p2p_failed', sid: activeGuestSid });
+              showP2PError('O bloqueio de rede/firewall impediu a conexão direta P2P após 2 tentativas.');
+            }
+          }
+        }, 6500);
+      } catch (_) {
+        showP2PError('Seu navegador bloqueou a criação de canais WebRTC P2P.');
+      }
     }
 
-    async function answerGuestP2P(sdpOffer) {
-      if (!isGuest) return;
-      closeWebRTC();
+    async function handleGuestOffer(data) {
+      if (!isGuest || data.sid !== mySessionSid) return;
+      cleanupWebRTC();
+      currentAttemptId = data.aid;
+      const aid = data.aid;
+      statusTxt.textContent = 'Negociando rota direta P2P com o anfitrião...';
+
       try {
         const peerConn = new RTCPeerConnection(ICE_CONFIG);
         pc = peerConn;
+
+        peerConn.onicecandidate = (ev) => {
+          if (ev.candidate && pc === peerConn) {
+            sendSignal({ t: 'ice', sid: mySessionSid, aid, c: ev.candidate });
+          }
+        };
+
         peerConn.ondatachannel = (ev) => {
           if (ev.channel.label === 'fast') bindFastChannel(ev.channel);
           if (ev.channel.label === 'rel') bindRelChannel(ev.channel);
         };
 
-        await peerConn.setRemoteDescription(new RTCSessionDescription(sdpOffer));
+        await peerConn.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        flushEarlyIce(aid);
+
         const answer = await peerConn.createAnswer();
         await peerConn.setLocalDescription(answer);
-        await waitIceGathering(peerConn, 1150);
+        sendSignal({ t: 'answer', sid: mySessionSid, aid, sdp: peerConn.localDescription });
 
-        if (pc === peerConn && peerConn.localDescription) {
-          sendMqtt({ t: 'rtc_ans_full', sid: mySessionSid, sdp: peerConn.localDescription });
-        }
-      } catch (_) {}
-    }
-
-    function handleSignaling(data) {
-      if (!isGuest) {
-        if (data.t === 'join') {
-          const isNewSession = data.sid !== activeGuestSid;
-          activeGuestSid = data.sid;
-          p1.name = cleanName(nameInput.value, 'Jogador 1');
-          p2.name = cleanName(data.name, 'Jogador 2');
-
-          if (mode !== 'ONLINE' || isNewSession) {
-            mode = 'ONLINE';
-            p2pAttempts = 0;
-            nameInput.blur();
-            overlay.style.display = 'none';
-            document.title = `🟢 ${p1.name} vs ${p2.name}`;
-            roundId++;
-            initPlayers();
-            initiateHostP2P();
+        p2pWatchdog = setTimeout(() => {
+          if (!p2pConnected && pc === peerConn) {
+            showP2PError('Tempo esgotado ao abrir o túnel direto P2P entre os dois computadores.');
           }
-
-          sendMqtt({
-            t: 'welcome',
-            sid: activeGuestSid,
-            hostName: p1.name,
-            guestName: p2.name,
-            wins,
-            rId: roundId
-          });
-          return true;
-        }
-        if (data.t === 'rtc_ans_full' && data.sid === activeGuestSid && pc) {
-          pc.setRemoteDescription(new RTCSessionDescription(data.sdp)).catch(() => {});
-          return true;
-        }
-      } else {
-        if (data.t === 'welcome' && data.sid === mySessionSid) {
-          p1.name = cleanName(data.hostName, 'Jogador 1');
-          p2.name = cleanName(data.guestName, cleanName(nameInput.value, 'Jogador 2'));
-          wins = data.wins || wins;
-          if (mode !== 'ONLINE' || roundId !== data.rId) {
-            roundId = data.rId;
-            mode = 'ONLINE';
-            guestWantsJoin = false;
-            nameInput.blur();
-            overlay.style.display = 'none';
-            document.title = `🟢 ${p1.name} vs ${p2.name}`;
-            initPlayers();
-          }
-          updateHud();
-          return true;
-        }
-        if (data.t === 'rtc_offer_full' && data.sid === mySessionSid) {
-          answerGuestP2P(data.sdp);
-          return true;
-        }
+        }, 12500);
+      } catch (_) {
+        showP2PError('Falha ao negociar os parâmetros WebRTC P2P neste navegador.');
       }
-      return false;
     }
 
-    function handleIncoming(data) {
+    // Sinalização usada EXCLUSIVAMENTE para o aperto de mão WebRTC antes do jogo
+    function handleSignalPacket(data) {
       if (!data) return;
 
-      // Pacote enxuto de movimento em array: ["m", seq, rId, x, y, vx, vy, ax, ay, ammo]
+      if (!isGuest) {
+        if (data.t === 'join_p2p') {
+          activeGuestSid = data.sid;
+          p1.name = cleanName(nameInput.value, 'Jogador 1');
+          p1.nextChar = selectedChar;
+          p2.name = cleanName(data.name, 'Jogador 2');
+          p2.nextChar = CHARS[data.charId] ? data.charId : 'vanguard';
+          p2pAttempt = 0;
+          errorModal.style.display = 'none';
+
+          sendSignal({ t: 'ack_join', sid: activeGuestSid });
+          startHostP2PAttempt();
+        } else if (data.t === 'answer' && data.sid === activeGuestSid && data.aid === currentAttemptId && pc) {
+          pc.setRemoteDescription(new RTCSessionDescription(data.sdp))
+            .then(() => flushEarlyIce(data.aid))
+            .catch(() => {});
+        } else if (data.t === 'ice' && data.sid === activeGuestSid) {
+          if (pc && pc.remoteDescription && data.aid === currentAttemptId) {
+            pc.addIceCandidate(new RTCIceCandidate(data.c)).catch(() => {});
+          } else {
+            earlyIce.push({ aid: data.aid, c: data.c });
+          }
+        }
+      } else {
+        if (data.t === 'ack_join' && data.sid === mySessionSid) {
+          clearTimeout(guestSignalTimeout);
+          statusTxt.textContent = 'Anfitrião encontrado! Abrindo canal direto P2P...';
+        } else if (data.t === 'offer' && data.sid === mySessionSid) {
+          clearTimeout(guestSignalTimeout);
+          handleGuestOffer(data);
+        } else if (data.t === 'ice' && data.sid === mySessionSid) {
+          if (pc && pc.remoteDescription && data.aid === currentAttemptId) {
+            pc.addIceCandidate(new RTCIceCandidate(data.c)).catch(() => {});
+          } else {
+            earlyIce.push({ aid: data.aid, c: data.c });
+          }
+        } else if (data.t === 'p2p_failed' && data.sid === mySessionSid) {
+          showP2PError('A rede bloqueou a conexão direta P2P entre você e seu amigo.');
+        }
+      }
+    }
+
+    // Mensagens de jogo trafegadas 100% dentro do WebRTC P2P
+    function handleP2PMessage(data) {
+      if (!data) return;
+
       if (Array.isArray(data)) {
         if (data[0] === 'm' && mode === 'ONLINE') {
-          const [, seq, rId, x, y, vx, vy, ax, ay, am] = data;
+          const [, seq, rId, x, y, vx, vy, ax, ay, am, sh, tb, rl, rc] = data;
           const them = myId === 1 ? p2 : p1;
           if (rId !== roundId || seq <= them.lastSeq) return;
           them.lastSeq = seq;
@@ -621,58 +982,85 @@
           them.aimX = ax;
           them.aimY = ay;
           them.ammo = am;
+          them.shieldTime = sh;
+          them.turboTime = tb;
+          them.reloadBoostTime = rl;
+          them.ricochetTime = rc;
+          updateHud();
         }
         return;
       }
 
-      if (data.eid) {
-        if (seenEvents.has(data.eid)) return;
-        seenEvents.add(data.eid);
-        if (seenEvents.size > 400) {
-          const first = seenEvents.values().next().value;
-          seenEvents.delete(first);
-        }
-      }
-
-      if (handleSignaling(data)) return;
-
-      if (data.t === 'ping') {
-        sendFast({ t: 'pong', ts: data.ts });
-        return;
-      }
-      if (data.t === 'pong') {
-        recordPing(performance.now() - data.ts, false);
+      if (data.t === 'match_start') {
+        p2pConnected = true;
+        clearTimeout(p2pWatchdog);
+        errorModal.style.display = 'none';
+        wins = data.wins || wins;
+        p1.name = data.p1Name;
+        p1.nextChar = data.p1Char;
+        p2.name = data.p2Name;
+        p2.nextChar = data.p2Char;
+        mode = 'ONLINE';
+        nameInput.blur();
+        overlay.style.display = 'none';
+        document.title = `⚡ P2P: ${p1.name} vs ${p2.name}`;
+        initRoundState(data.rId, data.power);
+        try { fastDC.send(JSON.stringify({ t: 'p2p_probe', ts: performance.now() })); } catch (_) {}
         return;
       }
 
       if (mode !== 'ONLINE') return;
 
       if (data.t === 'fire') {
-        if (data.rId !== roundId || bullets.some((b) => b.id === data.id)) return;
-        const nb = {
-          id: data.id,
-          rId: data.rId,
-          x: data.x,
-          y: data.y,
-          vx: data.vx,
-          vy: data.vy,
-          owner: data.owner,
-          color: data.owner === 1 ? '#00dcff' : '#ff4664',
-          bounces: 1,
-          r: 5
-        };
+        if (data.rId !== roundId) return;
+        const transitSec = Math.min(0.12, ((pingMs || 8) / 2) / 1000);
 
-        // Avança a bala em micro-passos pelo tempo real de trânsito (respeitando paredes)
-        const transitSec = Math.min(0.26, ((pingMs || 100) / 2) / 1000);
-        let rem = transitSec;
-        let alive = true;
-        while (rem > 0.002 && alive) {
-          const step = Math.min(0.008, rem);
-          alive = stepSingleBullet(nb, step);
-          rem -= step;
+        for (const arr of data.list) {
+          const [id, x, y, vx, vy, r, life, bounces] = arr;
+          if (bullets.some((b) => b.id === id)) continue;
+          const nb = {
+            id,
+            rId: data.rId,
+            x, y, vx, vy,
+            owner: data.owner,
+            color: data.owner === 1 ? '#00dcff' : '#ff4664',
+            bounces,
+            r,
+            life,
+            maxLife: life,
+            superRicochet: bounces > 1
+          };
+          let rem = transitSec;
+          let alive = true;
+          while (rem > 0.002 && alive) {
+            const st = Math.min(0.008, rem);
+            alive = stepSingleBullet(nb, st);
+            rem -= st;
+          }
+          if (alive) bullets.push(nb);
         }
-        if (alive) bullets.push(nb);
-        else spawnSparks(nb.x, nb.y, nb.color, 5);
+      } else if (data.t === 'pu_spawn') {
+        if (data.rId === roundId) {
+          activePowerOrb = { id: data.id, kind: data.kind, x: data.x, y: data.y, r: 15, pulse: 0 };
+        }
+      } else if (data.t === 'pu_touch' && myId === 1) {
+        if (activePowerOrb && activePowerOrb.id === data.id) {
+          grantPowerUp(2, activePowerOrb);
+        }
+      } else if (data.t === 'pu_grant') {
+        if (data.rId !== roundId) return;
+        if (activePowerOrb && activePowerOrb.id === data.id) activePowerOrb = null;
+        applyPowerEffect(data.who === 1 ? p1 : p2, data.kind);
+      } else if (data.t === 'shield_break') {
+        if (data.rId !== roundId) return;
+        const idx = bullets.findIndex((b) => b.id === data.bId);
+        if (idx !== -1) bullets.splice(idx, 1);
+        const target = data.target === 1 ? p1 : p2;
+        target.shieldTime = 0;
+        target.invuln = 0.32;
+        spawnSparks(target.x, target.y, '#50fa7b', 18);
+        spawnPopup(target.x, target.y, 'ESCUDO BLOQUEOU!', '#50fa7b');
+        updateHud();
       } else if (data.t === 'hit') {
         if (data.rId !== roundId) return;
         const idx = bullets.findIndex((b) => b.id === data.bId);
@@ -685,245 +1073,229 @@
         spawnSparks(victim.x, victim.y, victim.color, 16);
         spawnPopup(victim.x, victim.y, '-1 HP', '#ff6b6b');
 
-        // Se o anfitrião sofreu o golpe final, confirma e sincroniza o placar oficial
         if (myId === 1 && victim.id === 1 && victim.hp <= 0 && winner === 0) {
           winner = 2;
           wins.p2++;
-          sendCritical({ t: 'ko', rId: roundId, winner: 2, wins });
+          sendP2PReliable({ t: 'ko', rId: roundId, winner: 2, wins });
         }
         updateHud();
       } else if (data.t === 'ko') {
         if (data.rId !== roundId) return;
         winner = data.winner;
         wins = data.wins;
-        if (winner === 1) {
-          p2.hp = 0;
-          if (p1.hp <= 0) p1.hp = 1;
-        } else {
-          p1.hp = 0;
-          if (p2.hp <= 0) p2.hp = 1;
-        }
+        if (winner === 1) { p2.hp = 0; if (p1.hp <= 0) p1.hp = 1; }
+        else { p1.hp = 0; if (p2.hp <= 0) p2.hp = 1; }
         const loser = winner === 1 ? p2 : p1;
         spawnSparks(loser.x, loser.y, loser.color, 24);
         updateHud();
+      } else if (data.t === 'next_char') {
+        const target = data.who === 1 ? p1 : p2;
+        if (CHARS[data.charId]) target.nextChar = data.charId;
       } else if (data.t === 'req_round' && myId === 1 && winner !== 0) {
-        startNextOnlineRound();
+        hostStartNextRound();
       } else if (data.t === 'new_round') {
-        roundId = data.rId;
         wins = data.wins;
-        initPlayers();
+        p1.nextChar = data.p1Char;
+        p2.nextChar = data.p2Char;
+        initRoundState(data.rId, data.power);
       }
     }
 
-    function startNextOnlineRound() {
-      roundId++;
-      initPlayers();
-      sendCritical({ t: 'new_round', rId: roundId, wins });
-    }
-
-    // Benchmark Automático das Rotas WebSocket para o Host escolher sempre a menor latência
-    function benchmarkBrokers() {
-      return new Promise((resolve) => {
-        let settled = false;
-        let finishedCount = 0;
-        let best = { idx: 2, rtt: Infinity }; // Fallback seguro na porta 443
-        const probes = [];
-
-        const finish = () => {
-          if (settled) return;
-          settled = true;
-          for (const pr of probes) {
-            try { pr.end(true); } catch (_) {}
-          }
-          resolve(best.idx);
-        };
-
-        const timer = setTimeout(finish, 2100);
-
-        BROKERS.forEach((b, idx) => {
-          const testTopic = `nr_probe_${Math.random().toString(36).substring(2, 10)}`;
-          let t0 = 0;
-          const pr = mqtt.connect(b.url, {
-            clientId: 'prb_' + Math.random().toString(36).substring(2, 9),
-            clean: true,
-            connectTimeout: 1900,
-            reconnectPeriod: 0
-          });
-          probes.push(pr);
-
-          pr.on('connect', () => {
-            pr.subscribe(testTopic, { qos: 0 }, () => {
-              t0 = performance.now();
-              pr.publish(testTopic, '1', { qos: 0 });
-            });
-          });
-
-          pr.on('message', () => {
-            const rtt = performance.now() - t0;
-            if (rtt < best.rtt) best = { idx, rtt };
-            try { pr.end(true); } catch (_) {}
-            finishedCount++;
-            if (finishedCount === BROKERS.length) {
-              clearTimeout(timer);
-              finish();
-            }
-          });
-
-          pr.on('error', () => {
-            try { pr.end(true); } catch (_) {}
-            finishedCount++;
-            if (finishedCount === BROKERS.length) {
-              clearTimeout(timer);
-              finish();
-            }
-          });
-        });
+    function hostStartNextRound() {
+      const nextPwr = nextPowerFromDeck();
+      const nextR = roundId + 1;
+      initRoundState(nextR, nextPwr);
+      sendP2PReliable({
+        t: 'new_round',
+        rId: nextR,
+        wins,
+        power: nextPwr,
+        p1Char: p1.charId,
+        p2Char: p2.charId
       });
     }
 
-    function connectWss() {
-      if (mqttClient) {
-        try { mqttClient.end(true); } catch (_) {}
-        mqttClient = null;
+    function applyPowerEffect(player, kind) {
+      const info = POWERS[kind];
+      if (!info) return;
+      if (kind === 'shield') {
+        player.shieldTime = 8.0;
+      } else if (kind === 'turbo') {
+        player.turboTime = 5.5;
+      } else if (kind === 'reload') {
+        player.ammo = player.maxAmmo;
+        player.reloadTimer = 0;
+        player.reloadBoostTime = 5.0;
+      } else if (kind === 'ricochet') {
+        player.ricochetTime = 5.5;
       }
-      clearTimeout(fallbackTimer);
-      wssConnected = false;
+      spawnSparks(player.x, player.y, info.color, 16);
+      spawnPopup(player.x, player.y, `+${info.name.toUpperCase()}`, info.color);
+      updateHud();
+    }
 
-      const broker = BROKERS[brokerIdx];
-      routeTxt.textContent = `${broker.name} | Sala: ${roomId}`;
+    function grantPowerUp(who, orb) {
+      const orbId = orb.id;
+      const kind = orb.kind;
+      activePowerOrb = null;
+      powerSpawnTimer = 6.5;
+      applyPowerEffect(who === 1 ? p1 : p2, kind);
+      if (mode === 'ONLINE') {
+        sendP2PReliable({ t: 'pu_grant', rId: roundId, id: orbId, who, kind });
+      }
+    }
+
+    // Inicializa canal leve apenas para o convite do link no Lobby
+    function connectLobbySignal() {
+      if (signalClient) {
+        try { signalClient.end(true); } catch (_) {}
+        signalClient = null;
+      }
+      clearTimeout(signalFallbackTimer);
+      signalReady = false;
 
       if (isGuest) {
         hostActions.style.display = 'none';
         guestActions.style.display = 'flex';
-        nameLabel.textContent = 'Seu Nome (Jogador 2):';
+        nameLabel.textContent = 'Seu Nome (Convidado):';
         joinBtn.disabled = true;
-        joinBtn.textContent = 'Conectando à sala...';
-        statusTxt.textContent = `Conectando à sala ${roomId}...`;
+        joinBtn.textContent = 'Localizando Sala...';
+        statusTxt.textContent = `Localizando sala ${roomId}...`;
       } else {
-        nameLabel.textContent = 'Seu Nome (Jogador 1):';
+        nameLabel.textContent = 'Seu Nome (Anfitrião):';
         copyBtn.disabled = true;
-        copyBtn.textContent = 'Conectando...';
-        statusTxt.textContent = `Ativando sala ${roomId} em ${broker.name}...`;
+        copyBtn.textContent = 'Gerando Link P2P...';
       }
 
-      mqttClient = mqtt.connect(broker.url, {
-        clientId: 'nr4_' + Math.random().toString(36).substring(2, 10),
+      signalClient = mqtt.connect(SIGNAL_BROKERS[signalIdx], {
+        clientId: 'nr5_' + Math.random().toString(36).substring(2, 10),
         clean: true,
-        connectTimeout: 5500,
+        connectTimeout: 5000,
         reconnectPeriod: 2000
       });
 
-      fallbackTimer = setTimeout(() => {
-        if (!mqttClient || !mqttClient.connected) {
+      signalFallbackTimer = setTimeout(() => {
+        if (!signalClient || !signalClient.connected) {
           if (!isGuest) {
-            brokerIdx = (brokerIdx + 1) % BROKERS.length;
-            connectWss();
+            signalIdx = (signalIdx + 1) % SIGNAL_BROKERS.length;
+            connectLobbySignal();
           } else {
-            statusTxt.textContent = 'Rota bloqueada na sua rede. Peça para seu amigo clicar em "Trocar Rota" e enviar o novo link.';
+            showP2PError('Sua rede bloqueou a busca da sala. Verifique o firewall ou extensões do navegador.');
           }
         }
-      }, 6000);
+      }, 5500);
 
-      mqttClient.on('connect', () => {
-        clearTimeout(fallbackTimer);
-        wssConnected = true;
+      signalClient.on('connect', () => {
+        clearTimeout(signalFallbackTimer);
+        signalReady = true;
 
         if (isGuest) {
-          mqttClient.subscribe(topicH2C, { qos: 0 });
-          statusTxt.textContent = 'Sala localizada! Digite seu nome abaixo e clique em Entrar:';
+          signalClient.subscribe(topicH2C, { qos: 0 });
+          statusTxt.textContent = 'Sala encontrada! Digite seu nome, escolha sua nave e clique em Conectar via P2P:';
           joinBtn.disabled = false;
-          joinBtn.textContent = 'Entrar na Partida';
-          if (!nameInput.value.trim()) nameInput.focus();
+          joinBtn.textContent = 'Conectar via P2P e Jogar';
         } else {
-          mqttClient.subscribe(topicC2H, { qos: 0 });
-          inviteUrl = `${window.location.origin}${window.location.pathname}?sala=${roomId}&b=${brokerIdx}&v=4`;
+          signalClient.subscribe(topicC2H, { qos: 0 });
+          inviteUrl = `${window.location.origin}${window.location.pathname}?sala=${roomId}&b=${signalIdx}&v=5`;
           if (window.location.protocol === 'file:') {
-            statusTxt.textContent = 'Arquivo aberto localmente. Publique no GitHub Pages para gerar o link online!';
+            statusTxt.textContent = 'Arquivo aberto localmente. Publique no GitHub Pages para usar o link P2P online!';
           } else {
-            statusTxt.textContent = 'Digite seu nome e copie o link da sala para enviar ao seu amigo:';
+            statusTxt.textContent = 'Escolha seu nome e sua nave, copie o link P2P e envie ao seu amigo:';
             copyBtn.disabled = false;
-            copyBtn.textContent = 'Copiar Link da Sala';
-            if (!nameInput.value.trim()) nameInput.focus();
+            copyBtn.textContent = 'Copiar Link P2P da Sala';
           }
         }
       });
 
-      mqttClient.on('message', (_, payload) => {
-        try { handleIncoming(JSON.parse(payload.toString())); } catch (_) {}
+      signalClient.on('message', (_, payload) => {
+        try { handleSignalPacket(JSON.parse(payload.toString())); } catch (_) {}
       });
     }
 
-    // Inicialização inteligente: Convidado entra na rota do link; Anfitrião elege a mais rápida
-    if (isGuest || params.has('b')) {
-      connectWss();
-    } else {
-      benchmarkBrokers().then((bestIdx) => {
-        brokerIdx = bestIdx;
-        connectWss();
-      });
-    }
+    connectLobbySignal();
 
-    // Eventos do Lobby
-    nameInput.addEventListener('input', () => {
-      const val = nameInput.value.trim();
-      safeSet(localStorage, isGuest ? 'nr_name_p2' : 'nr_name_p1', val);
-      if (!isGuest) {
-        p1.name = cleanName(val, 'Jogador 1');
-        updateHud();
-      }
-    });
-
+    // Eventos da Interface
     copyBtn.addEventListener('click', () => {
       const typed = nameInput.value.trim();
       if (!typed) {
-        statusTxt.textContent = 'Por favor, digite seu nome acima antes de copiar o link!';
+        statusTxt.textContent = 'Digite seu nome acima antes de copiar o link P2P!';
         nameInput.focus();
         return;
       }
       p1.name = cleanName(typed, 'Jogador 1');
       safeSet(localStorage, 'nr_name_p1', p1.name);
-      updateHud();
+      copyBtn.blur();
 
       navigator.clipboard.writeText(inviteUrl).then(() => {
-        copyBtn.textContent = 'Link Copiado! Aguardando amigo...';
-        statusTxt.textContent = `Sala pronta, ${p1.name}! Quando seu amigo digitar o nome e clicar em Entrar, o jogo inicia.`;
+        copyBtn.textContent = 'Link Copiado! Aguardando conexão P2P...';
+        statusTxt.textContent = `Pronto, ${p1.name}! Mantenha esta aba aberta até seu amigo conectar via P2P.`;
       });
     });
 
-    joinBtn.addEventListener('click', () => {
+    function initiateGuestJoin() {
       const typed = nameInput.value.trim();
       if (!typed) {
-        statusTxt.textContent = 'Digite seu nome acima antes de entrar na partida!';
+        statusTxt.textContent = 'Digite seu nome acima antes de iniciar a conexão P2P!';
         nameInput.focus();
         return;
       }
+      if (!signalReady) {
+        showP2PError('Ainda sem resposta do servidor de busca de sala. Clique em Tentar Novamente.');
+        return;
+      }
+
       p2.name = cleanName(typed, 'Jogador 2');
+      p2.nextChar = selectedChar;
       safeSet(localStorage, 'nr_name_p2', p2.name);
-      guestWantsJoin = true;
+
+      errorModal.style.display = 'none';
       joinBtn.disabled = true;
-      joinBtn.textContent = 'Entrando na arena...';
-      statusTxt.textContent = 'Conectando com o anfitrião da sala...';
-      sendMqtt({ t: 'join', sid: mySessionSid, name: p2.name });
+      joinBtn.blur();
+      joinBtn.textContent = 'Conectando via P2P...';
+      statusTxt.textContent = 'Chamando o anfitrião para abrir túnel direto P2P...';
+
+      sendSignal({ t: 'join_p2p', sid: mySessionSid, name: p2.name, charId: selectedChar });
+
+      clearTimeout(guestSignalTimeout);
+      guestSignalTimeout = setTimeout(() => {
+        if (!p2pConnected && !pc) {
+          showP2PError('O anfitrião não respondeu ao chamado P2P (verifique se ele está com a página da sala aberta) ou a rede bloqueou o pacote.');
+        }
+      }, 8000);
+    }
+
+    joinBtn.addEventListener('click', initiateGuestJoin);
+
+    retryP2PBtn.addEventListener('click', () => {
+      retryP2PBtn.blur();
+      errorModal.style.display = 'none';
+      if (isGuest) {
+        initiateGuestJoin();
+      } else if (activeGuestSid) {
+        p2pAttempt = 0;
+        startHostP2PAttempt();
+      } else {
+        connectLobbySignal();
+      }
     });
 
-    switchRouteBtn.addEventListener('click', () => {
-      mode = 'MENU';
-      brokerIdx = (brokerIdx + 1) % BROKERS.length;
-      connectWss();
+    closeErrBtn.addEventListener('click', () => {
+      closeErrBtn.blur();
+      errorModal.style.display = 'none';
     });
 
     localBtn.addEventListener('click', () => {
+      localBtn.blur();
       if (!localSetupOpen) {
         localSetupOpen = true;
-        localP2Group.style.display = 'flex';
-        nameLabel.textContent = 'Nome do Jogador 1 (WASD + F):';
-        localBtn.textContent = 'Iniciar Duelo Local';
+        localP2NameBox.style.display = 'flex';
+        localP2CharBox.style.display = 'flex';
+        nameLabel.textContent = 'Nome do Jogador 1 (WASD + Espaço):';
+        charGridLabel.textContent = 'Escolha a Nave do Jogador 1 (Comparativo de Atributos):';
+        localBtn.textContent = 'Iniciar Partida no Mesmo PC';
         localBtn.classList.remove('secondary');
         copyBtn.style.display = 'none';
-        switchRouteBtn.style.display = 'none';
-        statusTxt.textContent = 'Digite os nomes dos dois jogadores para jogar no mesmo teclado:';
-        if (!nameInput.value.trim()) nameInput.focus();
-        else nameInputP2.focus();
+        statusTxt.textContent = 'Configure os nomes e as naves dos dois jogadores para jogar localmente:';
         return;
       }
 
@@ -932,19 +1304,25 @@
       safeSet(localStorage, 'nr_name_p1', n1);
       safeSet(localStorage, 'nr_name_local_p2', n2);
 
-      closeWebRTC();
-      if (mqttClient) { try { mqttClient.end(true); } catch (_) {} }
+      cleanupWebRTC();
+      if (signalClient) { try { signalClient.end(true); } catch (_) {} }
+
       p1.name = n1;
+      p1.nextChar = selectedChar;
       p2.name = n2;
+      p2.nextChar = charSelectP2.value;
       wins = { p1: 0, p2: 0 };
       mode = 'LOCAL';
       nameInput.blur();
       nameInputP2.blur();
+      charSelectP2.blur();
       overlay.style.display = 'none';
-      initPlayers();
+      initRoundState(1, nextPowerFromDeck());
     });
 
-    // Física, Extrapolação e Registro Instantâneo de Tiros
+    // =========================================================================
+    // FÍSICA, PADRÕES DE TIRO E PODERES DA RODADA
+    // =========================================================================
     function rectCircleCollide(rx, ry, rw, rh, cx, cy, cr) {
       const testX = Math.max(rx, Math.min(cx, rx + rw));
       const testY = Math.max(ry, Math.min(cy, ry + rh));
@@ -966,7 +1344,18 @@
       }
     }
 
+    function tickBuffTimers(p, dt) {
+      const hadBuff = (p.shieldTime > 0) || (p.turboTime > 0) || (p.reloadBoostTime > 0) || (p.ricochetTime > 0);
+      if (p.shieldTime > 0) p.shieldTime = Math.max(0, p.shieldTime - dt);
+      if (p.turboTime > 0) p.turboTime = Math.max(0, p.turboTime - dt);
+      if (p.reloadBoostTime > 0) p.reloadBoostTime = Math.max(0, p.reloadBoostTime - dt);
+      if (p.ricochetTime > 0) p.ricochetTime = Math.max(0, p.ricochetTime - dt);
+      const hasBuff = (p.shieldTime > 0) || (p.turboTime > 0) || (p.reloadBoostTime > 0) || (p.ricochetTime > 0);
+      if (hadBuff !== hasBuff) updateHud();
+    }
+
     function updateLocalPlayer(p, dx, dy, dt) {
+      const cfg = CHARS[p.charId];
       if (dx !== 0 || dy !== 0) {
         const len = Math.hypot(dx, dy);
         dx /= len;
@@ -974,15 +1363,20 @@
         p.aimX = dx;
         p.aimY = dy;
       }
-      p.vx = dx * SPEED;
-      p.vy = dy * SPEED;
+
+      const spd = p.turboTime > 0 ? BASE_SPEED * 1.30 : BASE_SPEED;
+      p.vx = dx * spd;
+      p.vy = dy * spd;
       moveWithObstacles(p, p.vx * dt, p.vy * dt);
 
-      if (p.fireCd > 0) p.fireCd -= dt;
+      if (p.fireCd > 0) p.fireCd = Math.max(0, p.fireCd - dt);
       if (p.invuln > 0) p.invuln = Math.max(0, p.invuln - dt);
-      if (p.ammo < p.maxAmmo) {
-        p.reloadTimer += dt;
-        if (p.reloadTimer >= 1.0) {
+      tickBuffTimers(p, dt);
+
+      if (p.ammo < cfg.maxAmmo) {
+        const reloadMult = p.reloadBoostTime > 0 ? 2.0 : 1.0;
+        p.reloadTimer += dt * reloadMult;
+        if (p.reloadTimer >= cfg.reloadTime) {
           p.ammo++;
           p.reloadTimer = 0;
         }
@@ -991,7 +1385,7 @@
 
     function updateRemotePlayer(p, dt) {
       const age = (performance.now() - p.lastPktTime) / 1000;
-      if (age < 0.24) {
+      if (age < 0.22) {
         const prevX = p.x, prevY = p.y;
         p.x = p.netX; p.y = p.netY;
         moveWithObstacles(p, p.vx * dt, p.vy * dt);
@@ -1005,52 +1399,98 @@
       const ey = p.netY - p.y;
       const errDist = Math.hypot(ex, ey);
 
-      if (errDist > 180) {
+      if (errDist > 160) {
         p.x = p.netX;
         p.y = p.netY;
-      } else if (errDist > 0.4) {
-        const maxDriftSpeed = Math.min(errDist * 11, 165);
+      } else if (errDist > 0.3) {
+        const maxDriftSpeed = Math.min(errDist * 13, 190);
         const step = Math.min(errDist, maxDriftSpeed * dt);
         moveWithObstacles(p, (ex / errDist) * step, (ey / errDist) * step);
       }
 
       if (p.invuln > 0) p.invuln = Math.max(0, p.invuln - dt);
+      tickBuffTimers(p, dt);
     }
 
     function shootBullet(p, syncOnline) {
+      const cfg = CHARS[p.charId];
       if (p.ammo <= 0 || p.fireCd > 0) return;
       p.ammo--;
-      p.fireCd = 0.16;
+      p.fireCd = cfg.fireCd;
 
-      const b = {
-        id: `${p.id}_${++bulletSeq}`,
-        rId: roundId,
-        x: p.x + p.aimX * (p.r + 8),
-        y: p.y + p.aimY * (p.r + 8),
-        vx: p.aimX * BULLET_SPEED,
-        vy: p.aimY * BULLET_SPEED,
-        owner: p.id,
-        color: p.color,
-        bounces: 1,
-        r: 5
-      };
-      bullets.push(b);
+      const baseAngle = Math.atan2(p.aimY, p.aimX);
+      const perpX = -p.aimY;
+      const perpY = p.aimX;
+      const bounces = p.ricochetTime > 0 ? 3 : 1;
+      const life = p.ricochetTime > 0 ? cfg.bulletLife * 1.25 : cfg.bulletLife;
 
-      if (syncOnline) {
-        sendCritical({
-          t: 'fire',
-          id: b.id,
+      let specs = [];
+      if (p.charId === 'vanguard') {
+        specs.push({ ang: baseAngle, ox: 0, oy: 0 });
+      } else if (p.charId === 'scatter') {
+        const spreadRad = 13 * (Math.PI / 180);
+        specs.push(
+          { ang: baseAngle - spreadRad, ox: 0, oy: 0 },
+          { ang: baseAngle, ox: 0, oy: 0 },
+          { ang: baseAngle + spreadRad, ox: 0, oy: 0 }
+        );
+      } else if (p.charId === 'specter') {
+        const side = p.barrelToggle;
+        p.barrelToggle = -p.barrelToggle;
+        const cantRad = side * 4.5 * (Math.PI / 180);
+        specs.push({
+          ang: baseAngle + cantRad,
+          ox: perpX * 6 * side,
+          oy: perpY * 6 * side
+        });
+      }
+
+      const spawned = [];
+      for (const sp of specs) {
+        const bx = p.x + p.aimX * (p.r + cfg.bulletRadius + 4) + sp.ox;
+        const by = p.y + p.aimY * (p.r + cfg.bulletRadius + 4) + sp.oy;
+        const b = {
+          id: `${p.id}_${++bulletSeq}`,
           rId: roundId,
-          x: Math.round(b.x * 10) / 10,
-          y: Math.round(b.y * 10) / 10,
-          vx: Math.round(b.vx * 10) / 10,
-          vy: Math.round(b.vy * 10) / 10,
-          owner: b.owner
+          x: bx,
+          y: by,
+          vx: Math.cos(sp.ang) * BULLET_SPEED,
+          vy: Math.sin(sp.ang) * BULLET_SPEED,
+          owner: p.id,
+          color: p.color,
+          bounces,
+          r: cfg.bulletRadius,
+          life,
+          maxLife: life,
+          superRicochet: bounces > 1
+        };
+        bullets.push(b);
+        spawned.push(b);
+      }
+
+      if (syncOnline && spawned.length > 0) {
+        sendP2PReliable({
+          t: 'fire',
+          rId: roundId,
+          owner: p.id,
+          list: spawned.map((b) => [
+            b.id,
+            Math.round(b.x * 10) / 10,
+            Math.round(b.y * 10) / 10,
+            Math.round(b.vx * 10) / 10,
+            Math.round(b.vy * 10) / 10,
+            b.r,
+            Math.round(b.life * 100) / 100,
+            b.bounces
+          ])
         });
       }
     }
 
     function stepSingleBullet(b, dt) {
+      b.life -= dt;
+      if (b.life <= 0) return false;
+
       for (let s = 0; s < 2; s++) {
         b.x += b.vx * dt * 0.5;
         if (b.x - b.r <= 0 || b.x + b.r >= W || OBSTACLES.some((o) => rectCircleCollide(o.x, o.y, o.w, o.h, b.x, b.y, b.r))) {
@@ -1071,20 +1511,21 @@
 
       for (let i = sparks.length - 1; i >= 0; i--) {
         const sp = sparks[i];
-        sp.x += sp.vx * dt;
-        sp.y += sp.vy * dt;
-        sp.life -= dt;
+        sp.x += sp.vx * dt; sp.y += sp.vy * dt; sp.life -= dt;
         if (sp.life <= 0) sparks.splice(i, 1);
       }
-
       for (let i = popups.length - 1; i >= 0; i--) {
         const pp = popups[i];
-        pp.y -= 38 * dt;
-        pp.life -= dt;
+        pp.y -= 36 * dt; pp.life -= dt;
         if (pp.life <= 0) popups.splice(i, 1);
       }
 
-      if (winner || mode === 'MENU') return;
+      if (mode === 'MENU' || winner) return;
+
+      if (introTimer > 0) {
+        introTimer = Math.max(0, introTimer - dt);
+        return;
+      }
 
       if (mode === 'LOCAL') {
         const p1dx = (keys['KeyD'] ? 1 : 0) - (keys['KeyA'] ? 1 : 0);
@@ -1094,20 +1535,23 @@
         updateLocalPlayer(p1, p1dx, p1dy, dt);
         updateLocalPlayer(p2, p2dx, p2dy, dt);
 
+        if (keys['Space']) shootBullet(p1, false);
+        if (keys['Numpad1'] || keys['ShiftRight']) shootBullet(p2, false);
+
         const distP = Math.hypot(p2.x - p1.x, p2.y - p1.y);
         if (distP > 0 && distP < p1.r + p2.r) {
           const push = (p1.r + p2.r - distP) * 0.5;
-          const nx = (p2.x - p1.x) / distP;
-          const ny = (p2.y - p1.y) / distP;
-          moveWithObstacles(p1, -nx * push, -ny * push);
-          moveWithObstacles(p2, nx * push, ny * push);
+          moveWithObstacles(p1, -((p2.x - p1.x) / distP) * push, -((p2.y - p1.y) / distP) * push);
+          moveWithObstacles(p2, ((p2.x - p1.x) / distP) * push, ((p2.y - p1.y) / distP) * push);
         }
       } else if (mode === 'ONLINE') {
         const me = myId === 1 ? p1 : p2;
         const them = myId === 1 ? p2 : p1;
-        const inp = getCombinedInput();
+        const inp = getCombinedMove();
         updateLocalPlayer(me, inp.dx, inp.dy, dt);
         updateRemotePlayer(them, dt);
+
+        if (isHoldingFireOnline()) shootBullet(me, true);
 
         const distP = Math.hypot(them.x - me.x, them.y - me.y);
         if (distP > 0 && distP < me.r + them.r) {
@@ -1116,11 +1560,57 @@
         }
       }
 
-      // Colisão de projéteis com Registro Instantâneo no Atacante (0 ms de atraso visual)
+      // Gerenciamento do Poder Exclusivo da Rodada
+      if (activePowerOrb) {
+        activePowerOrb.pulse += dt * 5.5;
+        if (mode === 'LOCAL') {
+          for (const pl of [p1, p2]) {
+            if (Math.hypot(pl.x - activePowerOrb.x, pl.y - activePowerOrb.y) < pl.r + activePowerOrb.r) {
+              grantPowerUp(pl.id, activePowerOrb);
+              break;
+            }
+          }
+        } else if (mode === 'ONLINE') {
+          const me = myId === 1 ? p1 : p2;
+          if (Math.hypot(me.x - activePowerOrb.x, me.y - activePowerOrb.y) < me.r + activePowerOrb.r) {
+            if (myId === 1) {
+              grantPowerUp(1, activePowerOrb);
+            } else {
+              sendP2PReliable({ t: 'pu_touch', id: activePowerOrb.id });
+            }
+          }
+        }
+      } else if (mode === 'LOCAL' || (mode === 'ONLINE' && myId === 1)) {
+        powerSpawnTimer -= dt;
+        if (powerSpawnTimer <= 0) {
+          const spot = POWER_SPOTS[Math.floor(Math.random() * POWER_SPOTS.length)];
+          activePowerOrb = {
+            id: ++puSeq,
+            kind: currentRoundPower,
+            x: spot.x,
+            y: spot.y,
+            r: 15,
+            pulse: 0
+          };
+          powerSpawnTimer = 6.5;
+          if (mode === 'ONLINE') {
+            sendP2PReliable({
+              t: 'pu_spawn',
+              id: activePowerOrb.id,
+              rId: roundId,
+              kind: activePowerOrb.kind,
+              x: spot.x,
+              y: spot.y
+            });
+          }
+        }
+      }
+
+      // Atualização de projéteis e validação de impacto/escudo
       for (let i = bullets.length - 1; i >= 0; i--) {
         const b = bullets[i];
         if (!stepSingleBullet(b, dt)) {
-          spawnSparks(b.x, b.y, b.color, 5);
+          if (b.life > 0) spawnSparks(b.x, b.y, b.color, 5);
           bullets.splice(i, 1);
           continue;
         }
@@ -1131,13 +1621,20 @@
           if (Math.hypot(b.x - target.x, b.y - target.y) < target.r + b.r) {
             bullets.splice(i, 1);
             if (target.invuln <= 0) {
-              target.hp--;
-              target.invuln = 0.45;
-              spawnSparks(target.x, target.y, target.color, 15);
-              spawnPopup(target.x, target.y, '-1 HP', '#50fa7b');
-              if (target.hp <= 0) {
-                winner = b.owner;
-                if (winner === 1) wins.p1++; else wins.p2++;
+              if (target.shieldTime > 0) {
+                target.shieldTime = 0;
+                target.invuln = 0.32;
+                spawnSparks(target.x, target.y, '#50fa7b', 18);
+                spawnPopup(target.x, target.y, 'ESCUDO BLOQUEOU!', '#50fa7b');
+              } else {
+                target.hp--;
+                target.invuln = 0.45;
+                spawnSparks(target.x, target.y, target.color, 15);
+                spawnPopup(target.x, target.y, '-1 HP', '#50fa7b');
+                if (target.hp <= 0) {
+                  winner = b.owner;
+                  if (winner === 1) wins.p1++; else wins.p2++;
+                }
               }
               updateHud();
             }
@@ -1147,51 +1644,98 @@
           const them = myId === 1 ? p2 : p1;
 
           if (b.owner === myId) {
-            // SEUS tiros validam contra o inimigo imediatamente na sua tela!
             if (Math.hypot(b.x - them.x, b.y - them.y) < them.r + b.r) {
               bullets.splice(i, 1);
               if (them.invuln <= 0 && !winner) {
-                them.hp = Math.max(0, them.hp - 1);
-                them.invuln = 0.45;
-                spawnSparks(them.x, them.y, '#ffffff', 16);
-                spawnPopup(them.x, them.y, 'HIT! -1', '#50fa7b');
-                sendCritical({ t: 'hit', rId: roundId, bId: b.id, target: them.id, hp: them.hp });
+                if (them.shieldTime > 0) {
+                  them.shieldTime = 0;
+                  them.invuln = 0.32;
+                  spawnSparks(them.x, them.y, '#50fa7b', 18);
+                  spawnPopup(them.x, them.y, 'BLOQUEADO!', '#50fa7b');
+                  sendP2PReliable({ t: 'shield_break', rId: roundId, bId: b.id, target: them.id });
+                } else {
+                  them.hp = Math.max(0, them.hp - 1);
+                  them.invuln = 0.45;
+                  spawnSparks(them.x, them.y, '#ffffff', 16);
+                  spawnPopup(them.x, them.y, 'HIT! -1', '#50fa7b');
+                  sendP2PReliable({ t: 'hit', rId: roundId, bId: b.id, target: them.id, hp: them.hp });
 
-                if (them.hp <= 0) {
-                  winner = myId;
-                  if (myId === 1) {
-                    wins.p1++;
-                    sendCritical({ t: 'ko', rId: roundId, winner: 1, wins });
-                  } else {
-                    wins.p2++;
+                  if (them.hp <= 0) {
+                    winner = myId;
+                    if (myId === 1) {
+                      wins.p1++;
+                      sendP2PReliable({ t: 'ko', rId: roundId, winner: 1, wins });
+                    } else {
+                      wins.p2++;
+                    }
                   }
                 }
                 updateHud();
-              } else {
-                spawnSparks(b.x, b.y, b.color, 6);
               }
             }
-          } else {
-            // Tiros inimigos somem ao encostar visualmente em você (o HP desconta pelo evento exato do atacante)
-            if (Math.hypot(b.x - me.x, b.y - me.y) < me.r + b.r) {
-              bullets.splice(i, 1);
-              spawnSparks(b.x, b.y, b.color, 6);
-            }
+          } else if (Math.hypot(b.x - me.x, b.y - me.y) < me.r + b.r) {
+            bullets.splice(i, 1);
+            spawnSparks(b.x, b.y, b.color, 6);
           }
         }
       }
     }
 
+    // =========================================================================
+    // RENDERIZAÇÃO (Silhuetas distintas por nave + Anúncio do Poder da Rodada)
+    // =========================================================================
     function drawPlayer(p) {
       if (p.invuln > 0 && Math.floor(p.invuln * 20) % 2 === 0) return;
 
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-      ctx.lineTo(p.x + p.aimX * 24, p.y + p.aimY * 24);
-      ctx.stroke();
+      // Auras de poderes ativos
+      if (p.turboTime > 0) {
+        ctx.strokeStyle = '#bd93f9';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r + 4, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (p.shieldTime > 0) {
+        ctx.strokeStyle = '#50fa7b';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r + 7, 0, Math.PI * 2);
+        ctx.stroke();
+      }
 
+      // Silhueta do canhão conforme o personagem escolhido
+      const baseAng = Math.atan2(p.aimY, p.aimX);
+      const perpX = -p.aimY;
+      const perpY = p.aimX;
+      ctx.strokeStyle = p.ricochetTime > 0 ? '#ffb86c' : '#ffffff';
+
+      if (p.charId === 'vanguard') {
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + p.aimX * 25, p.y + p.aimY * 25);
+        ctx.stroke();
+      } else if (p.charId === 'scatter') {
+        ctx.lineWidth = 3.5;
+        for (const a of [-0.28, 0, 0.28]) {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x + Math.cos(baseAng + a) * 21, p.y + Math.sin(baseAng + a) * 21);
+          ctx.stroke();
+        }
+      } else if (p.charId === 'specter') {
+        ctx.lineWidth = 2.8;
+        for (const s of [-1, 1]) {
+          const sx = p.x + perpX * 6 * s;
+          const sy = p.y + perpY * 6 * s;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(sx + p.aimX * 23, sy + p.aimY * 23);
+          ctx.stroke();
+        }
+      }
+
+      // Corpo da nave
       ctx.fillStyle = p.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
@@ -1202,10 +1746,13 @@
       ctx.arc(p.x, p.y, p.r - 5, 0, Math.PI * 2);
       ctx.fill();
 
+      // Indicadores dinâmicos de munição (2, 3 ou 5 cargas)
+      const spacing = 8;
+      const startX = p.x - ((p.maxAmmo - 1) * spacing) / 2;
       for (let i = 0; i < p.maxAmmo; i++) {
-        ctx.fillStyle = i < p.ammo ? p.color : '#374155';
+        ctx.fillStyle = i < p.ammo ? (p.reloadBoostTime > 0 ? '#ffd73c' : p.color) : '#374155';
         ctx.beginPath();
-        ctx.arc(p.x - 9 + i * 9, p.y - p.r - 9, 3, 0, Math.PI * 2);
+        ctx.arc(startX + i * spacing, p.y - p.r - 10, 3, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -1215,12 +1762,35 @@
       ctx.fillText(p.name, p.x, p.y + p.r + 16);
     }
 
+    function drawPowerOrb(orb) {
+      const info = POWERS[orb.kind];
+      const pulseR = orb.r + Math.sin(orb.pulse) * 3;
+
+      ctx.strokeStyle = info.color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(orb.x, orb.y, pulseR, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#192038';
+      ctx.beginPath();
+      ctx.arc(orb.x, orb.y, orb.r - 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = info.color;
+      ctx.font = 'bold 15px Consolas, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(info.label, orb.x, orb.y + 1);
+      ctx.textBaseline = 'alphabetic';
+    }
+
     function render() {
       ctx.clearRect(0, 0, W, H);
 
       ctx.strokeStyle = '#1a2034';
       ctx.lineWidth = 1;
-      for (let x = 40; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+      for (let x = 45; x < W; x += 45) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
       for (let y = 40; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
 
       for (const o of OBSTACLES) {
@@ -1231,19 +1801,25 @@
         ctx.strokeRect(o.x, o.y, o.w, o.h);
       }
 
+      if (activePowerOrb) drawPowerOrb(activePowerOrb);
+
       drawPlayer(p1);
       drawPlayer(p2);
 
       for (const b of bullets) {
+        const fade = b.life < 0.12 ? Math.max(0.2, b.life / 0.12) : 1;
+        ctx.globalAlpha = fade;
         ctx.fillStyle = b.color;
         ctx.beginPath();
-        ctx.arc(b.x, b.y, b.r + 1.5, 0, Math.PI * 2);
+        ctx.arc(b.x, b.y, b.r + 1.2, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#ffffff';
+
+        ctx.fillStyle = b.superRicochet ? '#ffb86c' : '#ffffff';
         ctx.beginPath();
-        ctx.arc(b.x, b.y, 2.5, 0, Math.PI * 2);
+        ctx.arc(b.x, b.y, Math.max(1.8, b.r * 0.48), 0, Math.PI * 2);
         ctx.fill();
       }
+      ctx.globalAlpha = 1;
 
       for (const sp of sparks) {
         ctx.globalAlpha = Math.max(0, sp.life / sp.maxLife);
@@ -1256,7 +1832,7 @@
       for (const pp of popups) {
         ctx.globalAlpha = Math.max(0, pp.life / pp.maxLife);
         ctx.fillStyle = pp.color;
-        ctx.font = 'bold 14px Consolas, monospace';
+        ctx.font = 'bold 13px Consolas, monospace';
         ctx.textAlign = 'center';
         ctx.fillText(pp.text, pp.x, pp.y);
       }
@@ -1268,27 +1844,74 @@
         ctx.strokeRect(0, 0, W, H);
       }
 
+      // Painel de anúncio do Poder Exclusivo no início da rodada
+      if (introTimer > 0 && mode !== 'MENU') {
+        const pw = POWERS[currentRoundPower];
+        ctx.fillStyle = 'rgba(10, 12, 22, 0.82)';
+        ctx.fillRect(W / 2 - 310, H / 2 - 82, 620, 164);
+        ctx.strokeStyle = pw.color;
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(W / 2 - 310, H / 2 - 82, 620, 164);
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 22px Consolas, monospace';
+        ctx.fillText(`RODADA ${roundId}`, W / 2, H / 2 - 44);
+
+        ctx.fillStyle = pw.color;
+        ctx.font = 'bold 19px Consolas, monospace';
+        ctx.fillText(`PODER DA RODADA: [${pw.label}] ${pw.name.toUpperCase()}`, W / 2, H / 2 - 10);
+
+        ctx.fillStyle = '#d0dcf5';
+        ctx.font = '14px Consolas, monospace';
+        ctx.fillText(pw.desc, W / 2, H / 2 + 22);
+
+        ctx.fillStyle = '#8fa4d4';
+        ctx.font = 'bold 15px Consolas, monospace';
+        ctx.fillText(`Combate inicia em ${Math.ceil(introTimer)}...`, W / 2, H / 2 + 56);
+      }
+
+      // Tela de Fim de Rodada + Troca rápida de personagem
       if (winner) {
         const winPlayer = winner === 1 ? p1 : p2;
-        ctx.fillStyle = 'rgba(10, 12, 20, 0.84)';
+        ctx.fillStyle = 'rgba(10, 12, 20, 0.86)';
         ctx.fillRect(0, 0, W, H);
 
+        ctx.textAlign = 'center';
         ctx.fillStyle = winPlayer.color;
         ctx.font = 'bold 32px Consolas, monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText(`${winPlayer.name.toUpperCase()} VENCEU A RODADA!`, W / 2, H / 2 - 28);
+        ctx.fillText(`${winPlayer.name.toUpperCase()} VENCEU A RODADA!`, W / 2, H / 2 - 58);
 
         ctx.fillStyle = '#ffd73c';
         ctx.font = 'bold 20px Consolas, monospace';
-        ctx.fillText(`Placar Geral: ${p1.name} ${wins.p1} × ${wins.p2} ${p2.name}`, W / 2, H / 2 + 12);
+        ctx.fillText(`Placar Geral: ${p1.name} ${wins.p1} × ${wins.p2} ${p2.name}`, W / 2, H / 2 - 18);
 
-        ctx.fillStyle = '#f0f5ff';
-        ctx.font = 'bold 16px Consolas, monospace';
-        ctx.fillText('Pressione [ R ] para iniciar a próxima rodada', W / 2, H / 2 + 52);
+        if (mode === 'ONLINE') {
+          const me = myId === 1 ? p1 : p2;
+          ctx.fillStyle = '#9fb0d9';
+          ctx.font = '14px Consolas, monospace';
+          ctx.fillText(
+            `Trocar sua nave p/ próxima rodada: [1] Vanguarda  [2] Dispersor  [3] Espectro  (Atual: ${CHARS[me.nextChar].name})`,
+            W / 2,
+            H / 2 + 22
+          );
+        } else {
+          ctx.fillStyle = '#9fb0d9';
+          ctx.font = '13px Consolas, monospace';
+          ctx.fillText(
+            `Próxima nave — P1 [1/2/3]: ${CHARS[p1.nextChar].name}  |  P2 [7/8/9]: ${CHARS[p2.nextChar].name}`,
+            W / 2,
+            H / 2 + 22
+          );
+        }
+
+        ctx.fillStyle = '#50fa7b';
+        ctx.font = 'bold 17px Consolas, monospace';
+        ctx.fillText('Pressione [ R ] para sortear o próximo poder e jogar!', W / 2, H / 2 + 64);
       }
     }
 
-    // Loops de Física e Sincronização de Alta Frequência
+    // Loop de Simulação e Sincronização P2P de Alta Taxa (45 Hz)
     let lastTick = performance.now();
     let netSyncAccum = 0;
 
@@ -1300,14 +1923,12 @@
 
       simulate(dt);
 
-      if (mode === 'ONLINE') {
+      if (mode === 'ONLINE' && p2pConnected) {
         netSyncAccum += dt;
-        // 45 pacotes/s em P2P direto | 22 pacotes/s ultracompactos em WSS
-        const interval = p2pReady ? 0.022 : 0.045;
-        if (netSyncAccum >= interval) {
+        if (netSyncAccum >= 0.022) {
           netSyncAccum = 0;
           const me = myId === 1 ? p1 : p2;
-          sendFast([
+          sendP2PFast([
             'm',
             ++moveSeq,
             roundId,
@@ -1317,7 +1938,11 @@
             Math.round(me.vy),
             Math.round(me.aimX * 100) / 100,
             Math.round(me.aimY * 100) / 100,
-            me.ammo
+            me.ammo,
+            Math.round(me.shieldTime * 10) / 10,
+            Math.round(me.turboTime * 10) / 10,
+            Math.round(me.reloadBoostTime * 10) / 10,
+            Math.round(me.ricochetTime * 10) / 10
           ]);
         }
       }
@@ -1325,38 +1950,19 @@
 
     setInterval(() => {
       if (document.hidden) stepFrame();
-    }, 35);
+    }, 30);
 
-    // Sonda contínua de Ping e Reconexão Automática P2P
+    // Monitor contínuo de Ping e Saúde do Túnel P2P
     setInterval(() => {
-      if (isGuest && guestWantsJoin && mode !== 'ONLINE' && wssConnected) {
-        sendMqtt({ t: 'join', sid: mySessionSid, name: p2.name });
-      }
-
       if (mode === 'ONLINE') {
         const now = performance.now();
-
-        if (!p2pReady && fastDC && fastDC.readyState === 'open') {
-          try { fastDC.send(JSON.stringify({ t: 'p2p_probe', ts: now })); } catch (_) {}
+        if (!p2pConnected || !fastDC || fastDC.readyState !== 'open' || (lastP2PRecv > 0 && now - lastP2PRecv > 4500)) {
+          showP2PError('A comunicação direta P2P parou de responder durante a partida.');
+          return;
         }
-
-        // Retenta abrir o túnel P2P direto automaticamente se ainda estiver em WSS
-        if (!isGuest && !p2pReady && p2pAttempts < 4 && now - lastP2PAttemptTime > 5500) {
-          initiateHostP2P();
-        }
-
-        if (p2pReady && now - lastFastRecv > 2600) {
-          p2pReady = false;
-          updateHud();
-        }
-
-        if (p2pReady && fastDC && fastDC.readyState === 'open') {
-          try { fastDC.send(JSON.stringify({ t: 'p2p_probe', ts: now })); } catch (_) {}
-        } else {
-          sendMqtt({ t: 'ping', ts: now });
-        }
+        try { fastDC.send(JSON.stringify({ t: 'p2p_probe', ts: now })); } catch (_) {}
       }
-    }, 650);
+    }, 600);
 
     function loop() {
       stepFrame();
