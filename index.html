@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NEON RICOCHET // 1V1 P2P ARENA (v7)</title>
+  <title>NEON RICOCHET // 1V1 P2P ARENA (v8)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -206,7 +206,6 @@
       overflow: hidden;
     }
 
-    /* Linhas sutis de scanline estilo terminal tático */
     #overlay::before {
       content: "";
       position: absolute;
@@ -228,7 +227,6 @@
       z-index: 25;
     }
 
-    /* Cabeçalho Imersivo */
     .hero-header {
       width: 100%;
       display: flex;
@@ -262,7 +260,6 @@
       margin-top: 3px;
     }
 
-    /* Abas de Modo + Badge da Sala */
     .header-controls { display: flex; align-items: center; gap: 10px; }
     .room-pill {
       font-family: var(--font-mono);
@@ -301,7 +298,6 @@
       box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
     }
 
-    /* Barra de Status com LED pulsante */
     .telemetry-bar {
       width: 100%;
       background: rgba(15, 22, 42, 0.9);
@@ -342,7 +338,6 @@
       white-space: nowrap;
     }
 
-    /* Linha de Identificação dos Pilotos */
     .pilot-inputs {
       width: 100%;
       display: flex;
@@ -397,7 +392,6 @@
       75% { transform: translateX(5px); }
     }
 
-    /* Hangar de Naves (3 Cartões Táticos com Preview SVG + Barras + Dados) */
     .hangar-wrap {
       width: 100%;
       display: flex;
@@ -520,7 +514,6 @@
       border-radius: 99px;
     }
 
-    /* Rodapé de Ações e Teclas */
     .bottom-bar {
       width: 100%;
       display: flex;
@@ -586,7 +579,6 @@
     }
     .cta-btn.secondary:hover { border-color: var(--cyan); }
 
-    /* Modal de Diagnóstico P2P */
     .err-box {
       background: #141020;
       border: 1.5px solid var(--crimson);
@@ -634,7 +626,7 @@
 </head>
 <body>
 
-  <!-- HUD TÁTICO SUPERIOR (Nunca trunca nomes ou HP) -->
+  <!-- HUD TÁTICO SUPERIOR -->
   <div id="hud">
     <div class="pilot-panel p1">
       <div class="pilot-top">
@@ -675,7 +667,7 @@
     </div>
   </div>
 
-  <!-- ARENA + LOBBY IMERSIVO -->
+  <!-- ARENA + HANGAR IMERSIVO -->
   <div id="wrapper">
     <canvas id="game" width="920" height="560"></canvas>
 
@@ -685,7 +677,7 @@
           <div class="brand-title">
             <span class="brand-neon">NEON</span> <span class="brand-ricochet">RICOCHET</span>
           </div>
-          <div class="brand-sub">ARENA TÁTICA 1V1 // CONEXÃO DIRETA P2P EXCLUSIVA • v7</div>
+          <div class="brand-sub">ARENA TÁTICA 1V1 // MOTOR P2P v4 RESTAURADO • v8</div>
         </div>
 
         <div class="header-controls">
@@ -763,10 +755,10 @@
         <div class="err-title">⚠️ CONEXÃO DIRETA P2P BLOQUEADA</div>
         <div class="err-reason" id="errReasonTxt">Não foi possível abrir o túnel UDP direto entre os dois computadores.</div>
         <ol class="err-steps">
-          <li><b>Navegador Brave ou Anti-WebRTC:</b> Se um dos dois estiver usando o <b>Brave</b> ou extensões de bloqueio WebRTC/VPN, desative o escudo (ícone do leão na barra de endereço) nesta página e clique em tentar novamente.</li>
-          <li><b>Perfil de Rede no Windows:</b> Se estiverem no mesmo Wi-Fi/roteador, verifique nas configurações do Windows se a conexão está marcada como <b>Rede Privada</b> (redes marcadas como Públicas bloqueiam pacotes P2P locais).</li>
-          <li><b>Isolamento mDNS Local (Chrome / Edge):</b> Caso estejam na mesma rede local e o roteador bloqueie mDNS, abra <code>chrome://flags/#enable-webrtc-hide-local-ips-with-mdns</code> nos dois PCs, altere para <b>Disabled</b> e reinicie o navegador.</li>
-          <li><b>Redes Corporativas ou 4G Restrito:</b> Firewalls empresariais/universitários podem bloquear portas UDP ponto a ponto; teste preferencialmente em banda larga residencial.</li>
+          <li><b>Navegador Brave ou Opera GX (VPN/Escudo):</b> Se um dos dois usar <b>Brave</b>, desative o escudo (leão na barra de endereço) nesta página; no Opera GX ou extensões de privacidade, desative VPN e bloqueadores de WebRTC.</li>
+          <li><b>Perfil de Rede no Windows:</b> Se estiverem no mesmo Wi-Fi/roteador, confirme nas configurações do Windows se a rede está como <b>Rede Privada</b> (redes Públicas bloqueiam portas UDP diretas).</li>
+          <li><b>Isolamento mDNS Local (Chrome / Edge):</b> Na mesma rede local, se o roteador filtrar mDNS, abra <code>chrome://flags/#enable-webrtc-hide-local-ips-with-mdns</code> nos dois PCs, mude para <b>Disabled</b> e reinicie o navegador.</li>
+          <li><b>CGNAT Simétrico Estrito / Rede Corporativa:</b> Algumas redes empresariais, 4G ou provedores com NAT Simétrico bloqueiam portas UDP diretas sem servidor intermediário.</li>
         </ol>
       </div>
       <div class="cta-group">
@@ -837,7 +829,7 @@
     // SINTETIZADOR DE ÁUDIO WEB AUDIO API
     // =========================================================================
     let audioCtx = null;
-    let soundMuted = safeGet(localStorage, 'nr_mute_v7', '0') === '1';
+    let soundMuted = safeGet(localStorage, 'nr_mute_v8', '0') === '1';
 
     function updateMuteButton() {
       muteBtn.textContent = soundMuted ? '🔇' : '🔊';
@@ -901,7 +893,7 @@
 
     function toggleMute() {
       soundMuted = !soundMuted;
-      safeSet(localStorage, 'nr_mute_v7', soundMuted ? '1' : '0');
+      safeSet(localStorage, 'nr_mute_v8', soundMuted ? '1' : '0');
       updateMuteButton();
       if (!soundMuted) sfx.ui();
     }
@@ -1095,6 +1087,7 @@
       }
     };
 
+    // Mesmos brokers e servidores STUN limpos da v4
     const SIGNAL_BROKERS = [
       { name: 'EMQX Fast', url: 'wss://broker.emqx.io:8084/mqtt' },
       { name: 'HiveMQ Cloud', url: 'wss://broker.hivemq.com:8884/mqtt' },
@@ -1115,25 +1108,24 @@
     const myId = isGuest ? 2 : 1;
     let signalIdx = Math.min(SIGNAL_BROKERS.length - 1, Math.max(0, parseInt(params.get('b') || '0', 10) || 0));
 
-    let roomId = guestRoomParam || safeGet(sessionStorage, 'nr_room_v7');
+    let roomId = guestRoomParam || safeGet(sessionStorage, 'nr_room_v8');
     if (!roomId) {
       roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-      safeSet(sessionStorage, 'nr_room_v7', roomId);
+      safeSet(sessionStorage, 'nr_room_v8', roomId);
     }
     roomPill.textContent = `SALA #${roomId}`;
 
-    const topicC2H = `neonricochet_v7/${roomId}/c2h`;
-    const topicH2C = `neonricochet_v7/${roomId}/h2c`;
+    const topicC2H = `neonricochet_v8/${roomId}/c2h`;
+    const topicH2C = `neonricochet_v8/${roomId}/h2c`;
     const mySessionSid = Math.random().toString(36).substring(2, 9);
     let activeGuestSid = '';
     let activeReqId = '';
 
-    let selectedChar = safeGet(localStorage, 'nr_char_v7', 'vanguard');
+    let selectedChar = safeGet(localStorage, 'nr_char_v8', 'vanguard');
     if (!CHARS[selectedChar]) selectedChar = 'vanguard';
     nameInput.value = safeGet(localStorage, isGuest ? 'nr_name_p2' : 'nr_name_p1', '');
     nameInputP2.value = safeGet(localStorage, 'nr_name_local_p2', '');
 
-    // Feixes decorativos de laser para animar o fundo do menu inicial
     const bgLasers = Array.from({ length: 6 }, (_, i) => {
       const ang = (i * 1.05) + 0.4;
       return {
@@ -1149,7 +1141,7 @@
     function selectCharacter(id) {
       if (!CHARS[id]) return;
       selectedChar = id;
-      safeSet(localStorage, 'nr_char_v7', selectedChar);
+      safeSet(localStorage, 'nr_char_v8', selectedChar);
       if (p1 && !isGuest) p1.nextChar = selectedChar;
       if (p2 && isGuest) p2.nextChar = selectedChar;
       renderCharCards();
@@ -1214,9 +1206,9 @@
       });
     }
 
-    // Estado de Rede P2P Exclusivo (Corrigido com Bundled ICE + Negotiated Channels)
+    // Estado de Rede P2P Exclusivo (Arquitetura idêntica à v4: qos 0 + ondatachannel)
     let mode = 'MENU'; // MENU, ONLINE, LOCAL
-    let lobbyTab = 'ONLINE'; // ONLINE, LOCAL
+    let lobbyTab = 'ONLINE';
     let inviteUrl = '';
     let signalClient = null;
     let signalReady = false;
@@ -1226,12 +1218,23 @@
     let fastDC = null;
     let relDC = null;
     let p2pConnected = false;
+    let guestConfirmedMatch = false;
     let p2pAttempt = 0;
     let currentAttemptId = 0;
-    let p2pWatchdog = null;
+    let attemptStartedAt = 0;
+    let diagStage = '1/5 Sinalização';
+    let pendingIce = [];
+
+    let cachedOfferMsg = null;
+    let offerAcked = false;
+    let cachedAnsMsg = null;
+    let ansAcked = false;
+    let cachedMatchStartMsg = null;
+
     let guestJoining = false;
     let hostAckedJoin = false;
-    let guestJoinRetries = 0;
+    let guestJoinStartedAt = 0;
+    let lastSignalResendAt = 0;
     let currentJoinReqId = '';
     let lastP2PRecv = 0;
     let pingMs = null;
@@ -1445,7 +1448,6 @@
 
       const mapKey = { Digit1: 'vanguard', Digit2: 'scatter', Digit3: 'specter' };
 
-      // Permite escolher nave pelas teclas 1, 2 e 3 também no Menu Inicial
       if (mode === 'MENU' && mapKey[e.code]) {
         sfx.ui();
         selectCharacter(mapKey[e.code]);
@@ -1508,30 +1510,47 @@
     }
 
     // =========================================================================
-    // MOTOR P2P CORRIGIDO (Pacote Único SDP da v4 + Canais Pré-Negociados + QoS 1)
+    // MOTOR P2P IDÊNTICO À v4 (qos: 0 + createDataChannel / ondatachannel)
     // =========================================================================
     function sendSignal(obj) {
       if (signalClient && signalClient.connected) {
         const outTopic = isGuest ? topicC2H : topicH2C;
-        signalClient.publish(outTopic, JSON.stringify(obj), { qos: 1 });
+        signalClient.publish(outTopic, JSON.stringify(obj), { qos: 0 });
       }
     }
 
     function sendP2PFast(payload) {
-      if (p2pConnected && fastDC && fastDC.readyState === 'open') {
-        try { fastDC.send(JSON.stringify(payload)); } catch (_) {}
+      if (p2pConnected) {
+        const raw = JSON.stringify(payload);
+        if (fastDC && fastDC.readyState === 'open') {
+          try { fastDC.send(raw); return; } catch (_) {}
+        }
+        if (relDC && relDC.readyState === 'open') {
+          try { relDC.send(raw); } catch (_) {}
+        }
       }
     }
 
     function sendP2PReliable(payload) {
-      if (p2pConnected && relDC && relDC.readyState === 'open') {
-        try { relDC.send(JSON.stringify(payload)); } catch (_) {}
+      if (p2pConnected) {
+        const raw = JSON.stringify(payload);
+        if (relDC && relDC.readyState === 'open') {
+          try { relDC.send(raw); return; } catch (_) {}
+        }
+        if (fastDC && fastDC.readyState === 'open') {
+          try { fastDC.send(raw); } catch (_) {}
+        }
       }
     }
 
     function cleanupWebRTC() {
       p2pConnected = false;
-      clearTimeout(p2pWatchdog);
+      guestConfirmedMatch = false;
+      attemptStartedAt = 0;
+      cachedOfferMsg = null;
+      cachedAnsMsg = null;
+      cachedMatchStartMsg = null;
+      pendingIce = [];
       if (fastDC) { try { fastDC.close(); } catch (_) {} fastDC = null; }
       if (relDC) { try { relDC.close(); } catch (_) {} relDC = null; }
       if (pc) { try { pc.close(); } catch (_) {} pc = null; }
@@ -1542,40 +1561,71 @@
       guestJoining = false;
       hostAckedJoin = false;
       mode = 'MENU';
-      statusLed.classList.remove('ready');
       overlay.style.display = 'flex';
       errorModal.style.display = 'flex';
-      errReasonTxt.textContent = reason;
+      errReasonTxt.textContent = `${reason} [Última etapa: ${diagStage}]`;
 
       if (isGuest) {
         joinBtn.disabled = !signalReady;
         joinBtn.textContent = 'Conectar P2P e Entrar';
       } else {
-        statusTxt.textContent = 'Falha ao abrir túnel P2P. Confira o diagnóstico ou tente novamente.';
+        statusTxt.textContent = `Conexão P2P falhou em: ${diagStage}.`;
       }
       updateHud();
     }
 
-    function waitIceGathering(peerConn, timeoutMs = 1450) {
+    // Reúne candidatos locais e públicos (srflx) como na v4, sem travar em adaptadores lentos
+    function waitSmartIceGathering(peerConn) {
       return new Promise((resolve) => {
         if (peerConn.iceGatheringState === 'complete') {
           resolve();
           return;
         }
-        let settled = false;
+        let finished = false;
+        let srflxGraceTimer = null;
+        const tStart = performance.now();
+
         const done = () => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timer);
-          peerConn.removeEventListener('icegatheringstatechange', check);
+          if (finished) return;
+          finished = true;
+          clearTimeout(maxTimer);
+          clearTimeout(srflxGraceTimer);
+          peerConn.removeEventListener('icegatheringstatechange', onState);
+          peerConn.removeEventListener('icecandidate', onCand);
           resolve();
         };
-        const check = () => {
+
+        const onState = () => {
           if (peerConn.iceGatheringState === 'complete') done();
         };
-        peerConn.addEventListener('icegatheringstatechange', check);
-        const timer = setTimeout(done, timeoutMs);
+
+        const onCand = (ev) => {
+          if (!ev.candidate) {
+            done();
+            return;
+          }
+          if (ev.candidate.candidate && ev.candidate.candidate.includes('typ srflx') && !srflxGraceTimer) {
+            const elapsed = performance.now() - tStart;
+            const waitMore = Math.max(250, 650 - elapsed);
+            srflxGraceTimer = setTimeout(done, waitMore);
+          }
+        };
+
+        peerConn.addEventListener('icegatheringstatechange', onState);
+        peerConn.addEventListener('icecandidate', onCand);
+        const maxTimer = setTimeout(done, 1900);
       });
+    }
+
+    function flushPendingIce(aid) {
+      if (!pc || !pc.remoteDescription) return;
+      for (let i = pendingIce.length - 1; i >= 0; i--) {
+        if (pendingIce[i].aid === aid) {
+          const cand = pendingIce[i].cand;
+          pendingIce.splice(i, 1);
+          pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+        }
+      }
     }
 
     function onP2PTunnelConfirmed(sampleRtt) {
@@ -1586,8 +1636,11 @@
 
       if (!p2pConnected) {
         p2pConnected = true;
+        diagStage = '5/5 Túnel P2P Ativo';
         guestJoining = false;
-        clearTimeout(p2pWatchdog);
+        attemptStartedAt = 0;
+        cachedOfferMsg = null;
+        cachedAnsMsg = null;
         errorModal.style.display = 'none';
 
         if (!isGuest) {
@@ -1596,13 +1649,14 @@
           const firstPower = nextPowerFromDeck();
           const firstMap = nextMapFromDeck();
           mode = 'ONLINE';
+          guestConfirmedMatch = false;
           nameInput.blur();
           overlay.style.display = 'none';
           document.title = `⚡ P2P: ${p1.name} vs ${p2.name}`;
           initRoundState(roundId + 1, firstPower, firstMap);
           sfx.powerup();
 
-          sendP2PReliable({
+          cachedMatchStartMsg = {
             t: 'match_start',
             rId: roundId,
             p1Name: p1.name,
@@ -1612,135 +1666,170 @@
             wins,
             power: currentRoundPower,
             map: currentMapId
-          });
+          };
+          sendP2PReliable(cachedMatchStartMsg);
         }
       }
       updateHud();
     }
 
-    function createNegotiatedChannels(peerConn) {
-      // Canais pré-negociados (id 0 e id 1): zero atraso de criação e zero condição de corrida!
-      const fCh = peerConn.createDataChannel('fast', { ordered: false, maxRetransmits: 0, negotiated: true, id: 0 });
-      const rCh = peerConn.createDataChannel('rel', { ordered: true, negotiated: true, id: 1 });
+    function handleChannelRaw(raw, replyCh) {
+      lastP2PRecv = performance.now();
+      let data;
+      try { data = JSON.parse(raw); } catch (_) { return; }
 
-      fastDC = fCh;
-      relDC = rCh;
-
-      const handleCtrlAndGame = (raw, replyCh) => {
-        lastP2PRecv = performance.now();
-        let data;
-        try { data = JSON.parse(raw); } catch (_) { return; }
-
-        if (data && !Array.isArray(data)) {
-          if (data.t === 'p2p_probe' && Number.isFinite(data.ts)) {
-            try { replyCh.send(JSON.stringify({ t: 'p2p_ack', ts: data.ts })); } catch (_) {}
-            return;
-          }
-          if (data.t === 'p2p_ack' && Number.isFinite(data.ts)) {
-            onP2PTunnelConfirmed(performance.now() - data.ts);
-            return;
-          }
+      if (data && !Array.isArray(data)) {
+        if (data.t === 'p2p_probe' && Number.isFinite(data.ts)) {
+          try { replyCh.send(JSON.stringify({ t: 'p2p_ack', ts: data.ts })); } catch (_) {}
+          return;
         }
-        handleP2PMessage(data);
-      };
+        if (data.t === 'p2p_ack' && Number.isFinite(data.ts)) {
+          onP2PTunnelConfirmed(performance.now() - data.ts);
+          return;
+        }
+      }
+      handleP2PMessage(data);
+    }
 
-      fCh.onopen = () => {
-        try { fCh.send(JSON.stringify({ t: 'p2p_probe', ts: performance.now() })); } catch (_) {}
+    // Mesmos métodos bindFastChannel e bindRelChannel da v4 (sem negotiated: true!)
+    function bindFastChannel(ch) {
+      fastDC = ch;
+      ch.onopen = () => {
+        diagStage = '5/5 Canal Rápido Aberto';
+        try { ch.send(JSON.stringify({ t: 'p2p_probe', ts: performance.now() })); } catch (_) {}
       };
-      rCh.onopen = () => {
-        try { rCh.send(JSON.stringify({ t: 'p2p_probe', ts: performance.now() })); } catch (_) {}
-      };
-
-      fCh.onmessage = (ev) => handleCtrlAndGame(ev.data, fCh);
-      rCh.onmessage = (ev) => handleCtrlAndGame(ev.data, rCh);
-
-      const onDisconnect = () => {
-        if (mode === 'ONLINE') {
+      ch.onmessage = (ev) => handleChannelRaw(ev.data, ch);
+      ch.onclose = () => {
+        if (mode === 'ONLINE' && (!relDC || relDC.readyState !== 'open')) {
           showP2PError('O canal direto P2P com o outro jogador foi encerrado.');
         }
       };
-      fCh.onclose = onDisconnect;
-      rCh.onclose = onDisconnect;
     }
 
-    async function startHostP2PAttempt() {
+    function bindRelChannel(ch) {
+      relDC = ch;
+      ch.onopen = () => {
+        diagStage = '5/5 Canal Confiável Aberto';
+        try { ch.send(JSON.stringify({ t: 'p2p_probe', ts: performance.now() })); } catch (_) {}
+      };
+      ch.onmessage = (ev) => handleChannelRaw(ev.data, ch);
+      ch.onclose = () => {
+        if (mode === 'ONLINE' && (!fastDC || fastDC.readyState !== 'open')) {
+          showP2PError('O canal direto P2P com o outro jogador foi encerrado.');
+        }
+      };
+    }
+
+    function attachIceStateTelemetry(peerConn) {
+      peerConn.oniceconnectionstatechange = () => {
+        if (pc !== peerConn || p2pConnected) return;
+        const st = peerConn.iceConnectionState;
+        if (st === 'checking') {
+          diagStage = '4/5 Checagem UDP ICE';
+          statusTxt.textContent = 'Testando rota UDP direta entre os dois computadores...';
+        } else if (st === 'connected' || st === 'completed') {
+          diagStage = '5/5 UDP Conectado (Abrindo DataChannel)';
+          statusTxt.textContent = 'Rota UDP conectada! Validando canais de combate...';
+        }
+      };
+    }
+
+    async function initiateHostP2P() {
       if (isGuest || !activeGuestSid) return;
       cleanupWebRTC();
 
       p2pAttempt++;
       currentAttemptId++;
       const aid = currentAttemptId;
-      statusTxt.textContent = `Negociando túnel direto P2P com ${p2.name} (Tentativa ${p2pAttempt}/2)...`;
+      offerAcked = false;
+      diagStage = `2/5 Gerando Oferta SDP (Tentativa ${p2pAttempt}/4)`;
+      statusTxt.textContent = `Abrindo túnel direto P2P com ${p2.name} (Tentativa ${p2pAttempt}/4)...`;
 
       try {
         const peerConn = new RTCPeerConnection(ICE_CONFIG);
         pc = peerConn;
-        createNegotiatedChannels(peerConn);
+        attachIceStateTelemetry(peerConn);
 
-        let initialGatheringDone = false;
+        // Criação idêntica à v4 (in-band DCEP padrão do Chrome)
+        bindFastChannel(peerConn.createDataChannel('fast', { ordered: false, maxRetransmits: 0 }));
+        bindRelChannel(peerConn.createDataChannel('rel', { ordered: true }));
+
+        let offerSent = false;
         peerConn.onicecandidate = (ev) => {
-          // Envia candidatos tardios somente se surgirem após o pacote consolidado inicial
-          if (initialGatheringDone && ev.candidate && pc === peerConn) {
-            sendSignal({ t: 'rtc_late_ice', sid: activeGuestSid, aid, c: ev.candidate });
+          if (offerSent && ev.candidate && pc === peerConn) {
+            const cObj = ev.candidate.toJSON ? ev.candidate.toJSON() : ev.candidate;
+            sendSignal({ t: 'rtc_ice', sid: activeGuestSid, aid, cand: cObj });
           }
         };
 
         const offer = await peerConn.createOffer();
         await peerConn.setLocalDescription(offer);
-        await waitIceGathering(peerConn, 1450);
-        initialGatheringDone = true;
+        await waitSmartIceGathering(peerConn);
+        offerSent = true;
 
         if (pc !== peerConn || !peerConn.localDescription) return;
-        sendSignal({ t: 'rtc_offer_full', sid: activeGuestSid, aid, sdp: peerConn.localDescription });
 
-        p2pWatchdog = setTimeout(() => {
-          if (!p2pConnected && pc === peerConn) {
-            if (p2pAttempt < 2) {
-              startHostP2PAttempt();
-            } else {
-              sendSignal({ t: 'p2p_failed', sid: activeGuestSid });
-              showP2PError('O bloqueio de rede ou firewall impediu a conexão direta P2P após 2 tentativas.');
-            }
-          }
-        }, 9500);
+        diagStage = `2/5 Oferta SDP Enviada (Tentativa ${p2pAttempt}/4)`;
+        attemptStartedAt = performance.now();
+        lastSignalResendAt = attemptStartedAt;
+        cachedOfferMsg = { t: 'rtc_offer_full', sid: activeGuestSid, aid, sdp: peerConn.localDescription };
+        sendSignal(cachedOfferMsg);
       } catch (_) {
-        showP2PError('Seu navegador impediu a abertura do canal WebRTC P2P.');
+        showP2PError('Seu navegador bloqueou a criação de canais WebRTC P2P.');
       }
     }
 
     async function answerGuestP2P(data) {
       if (!isGuest || data.sid !== mySessionSid) return;
+      // Se já respondeu exatamente a esta tentativa, apenas confirma recebimento
+      if (data.aid === currentAttemptId && pc) {
+        sendSignal({ t: 'offer_ack', sid: mySessionSid, aid: data.aid });
+        return;
+      }
+
       cleanupWebRTC();
       currentAttemptId = data.aid;
       const aid = data.aid;
-      statusTxt.textContent = 'Oferta recebida! Estabelecendo rota UDP direta com o anfitrião...';
+      ansAcked = false;
+      diagStage = '3/5 Oferta Recebida (Gerando Resposta SDP)';
+      statusTxt.textContent = 'Oferta recebida! Negociando rota UDP direta com o anfitrião...';
+
+      sendSignal({ t: 'offer_ack', sid: mySessionSid, aid });
 
       try {
         const peerConn = new RTCPeerConnection(ICE_CONFIG);
         pc = peerConn;
-        createNegotiatedChannels(peerConn);
+        attachIceStateTelemetry(peerConn);
 
-        let initialGatheringDone = false;
+        // Recepção idêntica à v4 via ondatachannel
+        peerConn.ondatachannel = (ev) => {
+          if (ev.channel.label === 'fast') bindFastChannel(ev.channel);
+          if (ev.channel.label === 'rel') bindRelChannel(ev.channel);
+        };
+
+        let answerSent = false;
         peerConn.onicecandidate = (ev) => {
-          if (initialGatheringDone && ev.candidate && pc === peerConn) {
-            sendSignal({ t: 'rtc_late_ice', sid: mySessionSid, aid, c: ev.candidate });
+          if (answerSent && ev.candidate && pc === peerConn) {
+            const cObj = ev.candidate.toJSON ? ev.candidate.toJSON() : ev.candidate;
+            sendSignal({ t: 'rtc_ice', sid: mySessionSid, aid, cand: cObj });
           }
         };
 
         await peerConn.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        flushPendingIce(aid);
+
         const answer = await peerConn.createAnswer();
         await peerConn.setLocalDescription(answer);
-        await waitIceGathering(peerConn, 1450);
-        initialGatheringDone = true;
+        await waitSmartIceGathering(peerConn);
+        answerSent = true;
 
         if (pc !== peerConn || !peerConn.localDescription) return;
-        sendSignal({ t: 'rtc_ans_full', sid: mySessionSid, aid, sdp: peerConn.localDescription });
 
-        p2pWatchdog = setTimeout(() => {
-          if (!p2pConnected && pc === peerConn) {
-            showP2PError('Tempo esgotado ao aguardar resposta direta UDP do computador anfitrião.');
-          }
-        }, 12500);
+        diagStage = '3/5 Resposta SDP Enviada (Aguardando UDP ICE)';
+        attemptStartedAt = performance.now();
+        lastSignalResendAt = attemptStartedAt;
+        cachedAnsMsg = { t: 'rtc_ans_full', sid: mySessionSid, aid, sdp: peerConn.localDescription };
+        sendSignal(cachedAnsMsg);
       } catch (_) {
         showP2PError('Falha ao processar os parâmetros WebRTC P2P neste navegador.');
       }
@@ -1754,9 +1843,9 @@
           const incomingSid = String(data.sid || '');
           const incomingReq = String(data.reqId || '');
 
-          // Evita reiniciar negociação em andamento caso seja apenas retransmissão automática do convidado
+          sendSignal({ t: 'ack_join', sid: incomingSid });
+
           if (incomingSid === activeGuestSid && incomingReq === activeReqId && pc && !p2pConnected) {
-            sendSignal({ t: 'ack_join', sid: activeGuestSid });
             return;
           }
 
@@ -1766,28 +1855,49 @@
           p1.nextChar = selectedChar;
           p2.name = cleanName(data.name, 'PILOTO 2');
           p2.nextChar = CHARS[data.charId] ? data.charId : 'vanguard';
+          updateHud();
+
           p2pAttempt = 0;
           errorModal.style.display = 'none';
-
           if (lobbyTab === 'LOCAL') setLobbyTab('ONLINE');
-          sendSignal({ t: 'ack_join', sid: activeGuestSid });
-          startHostP2PAttempt();
+
+          initiateHostP2P();
+        } else if (data.t === 'offer_ack' && data.sid === activeGuestSid && data.aid === currentAttemptId) {
+          offerAcked = true;
         } else if (data.t === 'rtc_ans_full' && data.sid === activeGuestSid && data.aid === currentAttemptId && pc) {
-          pc.setRemoteDescription(new RTCSessionDescription(data.sdp)).catch(() => {});
-        } else if (data.t === 'rtc_late_ice' && data.sid === activeGuestSid && data.aid === currentAttemptId && pc && pc.remoteDescription) {
-          pc.addIceCandidate(new RTCIceCandidate(data.c)).catch(() => {});
+          offerAcked = true;
+          sendSignal({ t: 'ans_ack', sid: activeGuestSid, aid: data.aid });
+          if (!pc.remoteDescription) {
+            diagStage = '4/5 Resposta SDP Aplicada (Testando UDP)';
+            pc.setRemoteDescription(new RTCSessionDescription(data.sdp))
+              .then(() => flushPendingIce(data.aid))
+              .catch(() => {});
+          }
+        } else if (data.t === 'rtc_ice' && data.sid === activeGuestSid && data.cand) {
+          if (pc && pc.remoteDescription && data.aid === currentAttemptId) {
+            pc.addIceCandidate(new RTCIceCandidate(data.cand)).catch(() => {});
+          } else {
+            pendingIce.push({ aid: data.aid, cand: data.cand });
+          }
         }
       } else {
         if (data.t === 'ack_join' && data.sid === mySessionSid) {
           hostAckedJoin = true;
-          statusTxt.textContent = 'Anfitrião localizado! Abrindo túnel direto P2P...';
+          diagStage = '2/5 Anfitrião Localizado (Aguardando Oferta SDP)';
+          statusTxt.textContent = 'Anfitrião localizado! Recebendo chaves P2P...';
         } else if (data.t === 'rtc_offer_full' && data.sid === mySessionSid) {
           hostAckedJoin = true;
           answerGuestP2P(data);
-        } else if (data.t === 'rtc_late_ice' && data.sid === mySessionSid && data.aid === currentAttemptId && pc && pc.remoteDescription) {
-          pc.addIceCandidate(new RTCIceCandidate(data.c)).catch(() => {});
+        } else if (data.t === 'ans_ack' && data.sid === mySessionSid && data.aid === currentAttemptId) {
+          ansAcked = true;
+        } else if (data.t === 'rtc_ice' && data.sid === mySessionSid && data.cand) {
+          if (pc && pc.remoteDescription && data.aid === currentAttemptId) {
+            pc.addIceCandidate(new RTCIceCandidate(data.cand)).catch(() => {});
+          } else {
+            pendingIce.push({ aid: data.aid, cand: data.cand });
+          }
         } else if (data.t === 'p2p_failed' && data.sid === mySessionSid) {
-          showP2PError('A rede bloqueou o túnel direto P2P entre você e o anfitrião.');
+          showP2PError('A rede bloqueou a conexão UDP direta após 4 tentativas.');
         }
       }
     }
@@ -1815,6 +1925,7 @@
 
       if (Array.isArray(data)) {
         if (data[0] === 'm' && mode === 'ONLINE') {
+          guestConfirmedMatch = true;
           const [, seq, rId, x, y, vx, vy, ax, ay, am, sh, tb, rl, rc] = data;
           if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(vx) || !Number.isFinite(vy)) return;
           const them = myId === 1 ? p2 : p1;
@@ -1837,22 +1948,31 @@
         return;
       }
 
+      if (data.t === 'match_ack') {
+        guestConfirmedMatch = true;
+        return;
+      }
+
       if (data.t === 'match_start') {
         p2pConnected = true;
         guestJoining = false;
-        clearTimeout(p2pWatchdog);
+        attemptStartedAt = 0;
         errorModal.style.display = 'none';
-        wins = data.wins || wins;
-        p1.name = cleanName(data.p1Name, 'PILOTO 1');
-        p1.nextChar = CHARS[data.p1Char] ? data.p1Char : 'vanguard';
-        p2.name = cleanName(data.p2Name, 'PILOTO 2');
-        p2.nextChar = CHARS[data.p2Char] ? data.p2Char : 'vanguard';
-        mode = 'ONLINE';
-        nameInput.blur();
-        overlay.style.display = 'none';
-        document.title = `⚡ P2P: ${p1.name} vs ${p2.name}`;
-        initRoundState(data.rId, data.power, data.map);
-        sfx.powerup();
+        sendP2PReliable({ t: 'match_ack' });
+
+        if (mode !== 'ONLINE' || roundId !== data.rId) {
+          wins = data.wins || wins;
+          p1.name = cleanName(data.p1Name, 'PILOTO 1');
+          p1.nextChar = CHARS[data.p1Char] ? data.p1Char : 'vanguard';
+          p2.name = cleanName(data.p2Name, 'PILOTO 2');
+          p2.nextChar = CHARS[data.p2Char] ? data.p2Char : 'vanguard';
+          mode = 'ONLINE';
+          nameInput.blur();
+          overlay.style.display = 'none';
+          document.title = `⚡ P2P: ${p1.name} vs ${p2.name}`;
+          initRoundState(data.rId, data.power, data.map);
+          sfx.powerup();
+        }
         if (fastDC && fastDC.readyState === 'open') {
           try { fastDC.send(JSON.stringify({ t: 'p2p_probe', ts: performance.now() })); } catch (_) {}
         }
@@ -2005,7 +2125,6 @@
       }
     }
 
-    // Benchmark rápido para escolher o broker de sinalização mais veloz (como na v4)
     function benchmarkSignalBrokers() {
       return new Promise((resolve) => {
         let settled = false;
@@ -2023,10 +2142,10 @@
         const timer = setTimeout(finish, 1800);
 
         SIGNAL_BROKERS.forEach((b, idx) => {
-          const topic = `nr7_prb_${Math.random().toString(36).substring(2, 10)}`;
+          const topic = `nr8_prb_${Math.random().toString(36).substring(2, 10)}`;
           let t0 = 0;
           const pr = mqtt.connect(b.url, {
-            clientId: 'prb7_' + Math.random().toString(36).substring(2, 9),
+            clientId: 'prb8_' + Math.random().toString(36).substring(2, 9),
             clean: true,
             connectTimeout: 1650,
             reconnectPeriod: 0
@@ -2083,7 +2202,7 @@
 
       const broker = SIGNAL_BROKERS[signalIdx];
       signalClient = mqtt.connect(broker.url, {
-        clientId: 'nr7_' + Math.random().toString(36).substring(2, 10),
+        clientId: 'nr8_' + Math.random().toString(36).substring(2, 10),
         clean: true,
         connectTimeout: 5000,
         reconnectPeriod: 2000
@@ -2102,13 +2221,13 @@
         statusLed.classList.add('ready');
 
         if (isGuest) {
-          signalClient.subscribe(topicH2C, { qos: 1 });
+          signalClient.subscribe(topicH2C, { qos: 0 });
           statusTxt.textContent = `Sala #${roomId} pronta! Digite seu codinome, escolha sua nave e conecte via P2P:`;
           joinBtn.disabled = false;
           joinBtn.textContent = 'Conectar P2P e Entrar';
         } else {
-          signalClient.subscribe(topicC2H, { qos: 1 });
-          inviteUrl = `${window.location.origin}${window.location.pathname}?sala=${roomId}&b=${signalIdx}&v=7`;
+          signalClient.subscribe(topicC2H, { qos: 0 });
+          inviteUrl = `${window.location.origin}${window.location.pathname}?sala=${roomId}&b=${signalIdx}&v=8`;
           if (lobbyTab === 'ONLINE') {
             if (window.location.protocol === 'file:') {
               statusTxt.textContent = 'Arquivo local detectado. Publique no GitHub Pages para gerar o link P2P online!';
@@ -2136,7 +2255,7 @@
     }
 
     // =========================================================================
-    // INTERAÇÕES DO LOBBY (Abas Online / Local, Cópia e Conexão)
+    // INTERAÇÕES DO LOBBY
     // =========================================================================
     function setLobbyTab(tab) {
       lobbyTab = tab;
@@ -2192,7 +2311,7 @@
 
       navigator.clipboard.writeText(inviteUrl).then(() => {
         copyBtn.textContent = '✓ Link Copiado! Aguardando Oponente...';
-        statusTxt.textContent = `Convite copiado, ${p1.name}! Mantenha esta tela aberta enquanto seu amigo entra.`;
+        statusTxt.textContent = `Convite copiado, ${p1.name}! O túnel P2P abrirá automaticamente assim que seu amigo clicar.`;
       });
     });
 
@@ -2218,11 +2337,13 @@
       joinBtn.disabled = true;
       joinBtn.blur();
       joinBtn.textContent = 'Abrindo Túnel P2P...';
+      diagStage = '1/5 Chamando Anfitrião na Sala';
       statusTxt.textContent = 'Chamando o anfitrião para conexão direta P2P...';
 
       guestJoining = true;
       hostAckedJoin = false;
-      guestJoinRetries = 0;
+      guestJoinStartedAt = performance.now();
+      lastSignalResendAt = guestJoinStartedAt;
       currentJoinReqId = Math.random().toString(36).substring(2, 8);
 
       sendSignal({
@@ -2245,7 +2366,7 @@
         initiateGuestJoin();
       } else if (activeGuestSid) {
         p2pAttempt = 0;
-        startHostP2PAttempt();
+        initiateHostP2P();
       } else {
         connectLobbySignal();
       }
@@ -2284,7 +2405,7 @@
     });
 
     // =========================================================================
-    // FÍSICA, PROJÉTEIS E SIMULAÇÃO DE FUNDO DO MENU
+    // FÍSICA, PROJÉTEIS E PODERES
     // =========================================================================
     function rectCircleCollide(rx, ry, rw, rh, cx, cy, cr) {
       const testX = Math.max(rx, Math.min(cx, rx + rw));
@@ -2858,7 +2979,6 @@
         ctx.strokeRect(o.x, o.y, o.w, o.h);
       }
 
-      // Se estiver no Menu Inicial, desenha os feixes neon ricocheteando ao fundo
       if (mode === 'MENU') {
         for (const lz of bgLasers) {
           if (lz.trail.length > 1) {
@@ -3007,8 +3127,12 @@
       }
     }
 
+    // =========================================================================
+    // LOOPS COM WEB WORKER ANTI-SUSPENSÃO DE ABA EM SEGUNDO PLANO
+    // =========================================================================
     let lastTick = performance.now();
     let netSyncAccum = 0;
+    let lastProbeSentAt = 0;
 
     function stepFrame() {
       const now = performance.now();
@@ -3043,28 +3167,49 @@
       }
     }
 
-    setInterval(() => {
+    function networkSupervisorTick() {
+      const now = performance.now();
       if (document.hidden) stepFrame();
-    }, 30);
 
-    // Loop dedicado de Handshake P2P (250ms) — impede perda da sonda de abertura no MENU!
-    setInterval(() => {
+      // 1. Sonda contínua de abertura de canal P2P enquanto negocia
       if (pc && !p2pConnected) {
-        const now = performance.now();
         if (relDC && relDC.readyState === 'open') {
           try { relDC.send(JSON.stringify({ t: 'p2p_probe', ts: now })); } catch (_) {}
         }
         if (fastDC && fastDC.readyState === 'open') {
           try { fastDC.send(JSON.stringify({ t: 'p2p_probe', ts: now })); } catch (_) {}
         }
-      }
-    }, 250);
 
-    // Retransmissão segura de entrada do convidado + Medidor contínuo de Ping em partida
-    setInterval(() => {
+        // Retransmissão de segurança dos pacotes SDP caso o broker qos:0 descarte
+        if (!isGuest && cachedOfferMsg && !offerAcked && now - lastSignalResendAt > 950) {
+          lastSignalResendAt = now;
+          sendSignal(cachedOfferMsg);
+        }
+        if (isGuest && cachedAnsMsg && !ansAcked && now - lastSignalResendAt > 950) {
+          lastSignalResendAt = now;
+          sendSignal(cachedAnsMsg);
+        }
+
+        // Watchdog de 4 tentativas (como na v4) baseado em tempo real após envio do SDP
+        if (!isGuest && attemptStartedAt > 0 && now - attemptStartedAt > 8500) {
+          if (p2pAttempt < 4) {
+            initiateHostP2P();
+          } else {
+            sendSignal({ t: 'p2p_failed', sid: activeGuestSid });
+            showP2PError('O bloqueio de rede ou firewall impediu a conexão direta P2P após 4 tentativas.');
+          }
+        }
+        if (isGuest && attemptStartedAt > 0 && now - attemptStartedAt > 36000) {
+          showP2PError('Tempo esgotado aguardando confirmação UDP direta entre os dois computadores.');
+        }
+      }
+
+      // 2. Retransmissão do chamado inicial do Convidado caso o Anfitrião estivesse trocando de aba
       if (isGuest && guestJoining && !hostAckedJoin && !p2pConnected && signalReady) {
-        guestJoinRetries++;
-        if (guestJoinRetries <= 5) {
+        if (now - guestJoinStartedAt > 14000) {
+          showP2PError('O anfitrião não respondeu ao chamado da sala. Confirme se ele está com a página aberta.');
+        } else if (now - lastSignalResendAt > 950) {
+          lastSignalResendAt = now;
           sendSignal({
             t: 'join_p2p',
             sid: mySessionSid,
@@ -3072,25 +3217,44 @@
             name: p2.name,
             charId: selectedChar
           });
-        } else {
-          showP2PError('O anfitrião não respondeu ao chamado da sala. Confirme se ele está com a aba da sala aberta.');
         }
       }
 
-      if (mode === 'ONLINE') {
-        const now = performance.now();
+      // 3. Reenvio de match_start até o convidado confirmar + Ping em tempo real
+      if (mode === 'ONLINE' && p2pConnected) {
+        if (!isGuest && !guestConfirmedMatch && cachedMatchStartMsg) {
+          sendP2PReliable(cachedMatchStartMsg);
+        }
+
         const channelOpen = (fastDC && fastDC.readyState === 'open') || (relDC && relDC.readyState === 'open');
-        if (!p2pConnected || !channelOpen || (lastP2PRecv > 0 && now - lastP2PRecv > 5000)) {
+        if (!channelOpen || (lastP2PRecv > 0 && now - lastP2PRecv > 5500)) {
           showP2PError('A comunicação direta P2P perdeu resposta durante o duelo.');
           return;
         }
-        if (fastDC && fastDC.readyState === 'open') {
-          try { fastDC.send(JSON.stringify({ t: 'p2p_probe', ts: now })); } catch (_) {}
-        } else if (relDC && relDC.readyState === 'open') {
-          try { relDC.send(JSON.stringify({ t: 'p2p_probe', ts: now })); } catch (_) {}
+
+        if (now - lastProbeSentAt > 600) {
+          lastProbeSentAt = now;
+          if (fastDC && fastDC.readyState === 'open') {
+            try { fastDC.send(JSON.stringify({ t: 'p2p_probe', ts: now })); } catch (_) {}
+          } else if (relDC && relDC.readyState === 'open') {
+            try { relDC.send(JSON.stringify({ t: 'p2p_probe', ts: now })); } catch (_) {}
+          }
         }
       }
-    }, 650);
+    }
+
+    // Inicia Web Worker para manter o handshake ativo mesmo se a aba estiver em segundo plano
+    let workerStarted = false;
+    try {
+      const wBlob = new Blob(['setInterval(function(){ postMessage(1); }, 220);'], { type: 'application/javascript' });
+      const bgWorker = new Worker(URL.createObjectURL(wBlob));
+      bgWorker.onmessage = networkSupervisorTick;
+      workerStarted = true;
+    } catch (_) {}
+
+    if (!workerStarted) {
+      setInterval(networkSupervisorTick, 220);
+    }
 
     function loop() {
       stepFrame();
